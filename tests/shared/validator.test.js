@@ -74,3 +74,158 @@ describe('validator — top-level structure', () => {
     assert(!validate(p).valid);
   });
 });
+
+function frameWith(overrides) {
+  return Object.assign({
+    id: 'frame-01',
+    image_src: 'wide-shot',
+    image_filename: 'IMG_001.jpg',
+    composition_pattern: 'editorial-anchor',
+    layers: [],
+  }, overrides);
+}
+
+function textLayer(overrides) {
+  return Object.assign({
+    id: 'text-1', type: 'text',
+    content: 'Hello world',
+    font: { family: 'Inter', size_pct: 9, weight: 700, color: '#fff', opacity: 1 },
+    position: { zone: 'bottom-left', offset_x_pct: 6, offset_y_pct: -8 },
+    max_width_pct: 80,
+  }, overrides);
+}
+
+function shapeLayer(overrides) {
+  return Object.assign({
+    id: 'shape-1', type: 'shape',
+    shape: 'line', role: 'divider',
+    position: { zone: 'bottom-left', offset_x_pct: 6, offset_y_pct: -10 },
+    dimensions: { width_pct: 20, height_px: 2 },
+    fill_color: '#fff', fill_opacity: 0.6,
+  }, overrides);
+}
+
+function overlayLayer(gradient, overrides) {
+  return Object.assign({
+    id: 'overlay-1', type: 'overlay',
+    color: '#000', opacity: 1,
+    gradient: gradient
+      ? { enabled: true, direction: 'to-bottom', from_opacity: 0, to_opacity: 0.7, from_position_pct: 40, to_position_pct: 100 }
+      : { enabled: false },
+  }, overrides);
+}
+
+describe('validator — frames', () => {
+  it('accepts a valid frame with a text layer', () => {
+    const p = minimal();
+    p.frames = [frameWith({ layers: [textLayer()] })];
+    const r = validate(p);
+    assert(r.valid, r.errors?.join(', '));
+  });
+
+  it('rejects frame missing composition_pattern', () => {
+    const p = minimal();
+    p.frames = [frameWith({ composition_pattern: undefined })];
+    assert(!validate(p).valid);
+  });
+
+  it('rejects invalid composition_pattern', () => {
+    const p = minimal();
+    p.frames = [frameWith({ composition_pattern: 'not-a-pattern' })];
+    assert(!validate(p).valid);
+  });
+
+  it('rejects frame missing image_filename', () => {
+    const p = minimal();
+    p.frames = [frameWith({ image_filename: undefined })];
+    assert(!validate(p).valid);
+  });
+
+  it('rejects text layer missing max_width_pct', () => {
+    const p = minimal();
+    p.frames = [frameWith({ layers: [textLayer({ max_width_pct: undefined })] })];
+    assert(!validate(p).valid);
+  });
+
+  it('rejects shape layer without role', () => {
+    const p = minimal();
+    p.frames = [frameWith({ layers: [shapeLayer({ role: undefined })] })];
+    assert(!validate(p).valid);
+  });
+
+  it('rejects shape layer with invalid role', () => {
+    const p = minimal();
+    p.frames = [frameWith({ layers: [shapeLayer({ role: 'decoration' })] })];
+    assert(!validate(p).valid);
+  });
+
+  it('rejects duplicate layer ids within a frame', () => {
+    const p = minimal();
+    p.frames = [frameWith({ layers: [textLayer({ id: 'dup' }), shapeLayer({ id: 'dup' })] })];
+    assert(!validate(p).valid);
+  });
+
+  it('rejects invalid position zone', () => {
+    const p = minimal();
+    p.frames = [frameWith({ layers: [textLayer({ position: { zone: 'invalid-zone' } })] })];
+    assert(!validate(p).valid);
+  });
+});
+
+describe('validator — variety contract enforcement', () => {
+  it('flags zone overuse when one zone exceeds 40%', () => {
+    // 4 text frames all using bottom-left = 100% → must fail
+    const p = minimal();
+    p.variety_contract.zone_max_usage_pct = 40;
+    p.frames = [1,2,3,4].map((n, i) => frameWith({
+      id: `frame-0${n}`,
+      image_filename: `img-0${n}.jpg`,
+      composition_pattern: ['editorial-anchor','minimal-strip','data-callout','layered-depth'][i],
+      layers: [overlayLayer(true, { id: `ov-${n}` }), textLayer({ id: `t-${n}` })],
+    }));
+    const r = validate(p);
+    assert(!r.valid, 'expected zone overuse to be flagged');
+    assert(r.errors.some(e => e.includes('zone')));
+  });
+
+  it('accepts zone distribution within 40% limit', () => {
+    const zones = ['bottom-left','bottom-right','top-left','top-right'];
+    const patterns = ['editorial-anchor','minimal-strip','data-callout','layered-depth'];
+    const p = minimal();
+    p.variety_contract.zone_max_usage_pct = 40;
+    p.variety_contract.overlay_strategies = ['gradient', 'solid-bar'];
+    p.variety_contract.overlay_strategies_min = 2;
+    p.frames = [1,2,3,4].map((n, i) => frameWith({
+      id: `frame-0${n}`,
+      image_filename: `img-0${n}.jpg`,
+      composition_pattern: patterns[i],
+      layers: [
+        overlayLayer(i < 2, { id: `ov-${n}` }),
+        textLayer({ id: `t-${n}`, position: { zone: zones[i], offset_x_pct: 6, offset_y_pct: -8 } }),
+      ],
+    }));
+    const r = validate(p);
+    assert(r.valid, r.errors?.join(', '));
+  });
+
+  it('flags shape quota violation when no shapes present', () => {
+    const p = minimal();
+    p.variety_contract.shape_quota = { min_per_n_frames: 3, waiver: null };
+    p.frames = [1,2,3].map((n, i) => frameWith({
+      id: `frame-0${n}`,
+      image_filename: `img-0${n}.jpg`,
+      composition_pattern: ['editorial-anchor','minimal-strip','data-callout'][i],
+      layers: [textLayer({ id: `t-${n}` })],
+    }));
+    assert(!validate(p).valid);
+  });
+
+  it('accepts shape quota when waiver is set', () => {
+    const p = minimal();
+    p.variety_contract.shape_quota = { min_per_n_frames: 3, waiver: 'no scene geometry in this series' };
+    p.variety_contract.overlay_strategies_min = 0;
+    p.frames = [frameWith({ layers: [textLayer()] })];
+    const r = validate(p);
+    assert(r.valid, r.errors?.join(', '));
+  });
+});
