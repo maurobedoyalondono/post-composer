@@ -34,6 +34,11 @@ export class AppState {
     this.analysisMode = mode;
   }
 
+  /** @param {string|null} id */
+  setSelectedLayer(id) {
+    this.selectedLayerId = id ?? null;
+  }
+
   /** @returns {object|null} */
   get activeFrame() {
     if (!this.project) return null;
