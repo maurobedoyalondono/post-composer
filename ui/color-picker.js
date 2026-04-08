@@ -96,13 +96,13 @@ function _addFavorite(el, native, color, projectId, onChange) {
   const favs = _loadFavorites(projectId).filter(c => c !== color);
   favs.unshift(color);
   if (favs.length > MAX_FAVORITES) favs.pop();
-  localStorage.setItem(`cp-fav-${projectId}`, JSON.stringify(favs));
+  try { localStorage.setItem(`cp-fav-${projectId}`, JSON.stringify(favs)); } catch { /* storage full */ }
   _refreshFavRow(el, native, projectId, onChange);
 }
 
 function _removeFavorite(el, native, color, projectId, onChange) {
   const favs = _loadFavorites(projectId).filter(c => c !== color);
-  localStorage.setItem(`cp-fav-${projectId}`, JSON.stringify(favs));
+  try { localStorage.setItem(`cp-fav-${projectId}`, JSON.stringify(favs)); } catch { /* storage full */ }
   _refreshFavRow(el, native, projectId, onChange);
 }
 
@@ -116,22 +116,13 @@ function _addRecent(el, color, projectId) {
   const rec = _loadRecent(projectId).filter(c => c !== color);
   rec.unshift(color);
   if (rec.length > MAX_RECENT) rec.pop();
-  localStorage.setItem(`cp-recent-${projectId}`, JSON.stringify(rec));
-  // Update recent row DOM
+  try { localStorage.setItem(`cp-recent-${projectId}`, JSON.stringify(rec)); } catch { /* storage full */ }
+  // Update recent row DOM — existing delegation listener on .cp-recent handles clicks
   const recentRow = el.querySelector('.cp-recent');
   if (recentRow) {
     recentRow.innerHTML = rec
       .map(c => `<button class="cp-swatch" data-color="${c}" title="${c}" style="background:${c}"></button>`)
       .join('');
-    // Re-wire click handler for newly rendered swatches
-    recentRow.addEventListener('click', e => {
-      const c = e.target.closest('.cp-swatch')?.dataset.color;
-      const native = el.querySelector('.cp-native');
-      if (c && native) {
-        native.value = c;
-        // Note: not calling _apply here to avoid infinite loop — onChange already wired on native input
-      }
-    });
   }
 }
 
