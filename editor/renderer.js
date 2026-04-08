@@ -1,5 +1,5 @@
 // editor/renderer.js
-import { renderLayer } from './layers.js';
+import { renderLayer, computeLayerBounds } from './layers.js';
 
 /**
  * Renders a full post-composer frame to an HTMLCanvasElement.
@@ -13,6 +13,8 @@ export class Renderer {
    * @param {object} [opts]
    * @param {boolean} [opts.showSafeZone]
    * @param {string|null} [opts.guideType] — 'thirds', 'phi', 'cross', or null
+   * @param {string|null} [opts.selectedLayerId] — id of the currently selected layer
+   * @param {boolean} [opts.showLayerBounds] — draw bounding boxes for all visible layers
    */
   renderFrame(canvas, frame, project, images, opts = {}) {
     const ctx = canvas.getContext('2d');
@@ -34,7 +36,16 @@ export class Renderer {
       renderLayer(ctx, layer, w, h, images);
     }
 
-    // Debug / guide overlays
+    // Layer-bounds overlay (all layers)
+    if (opts.showLayerBounds) _drawAllBounds(ctx, frame.layers, w, h);
+
+    // Selection overlay (selected layer)
+    if (opts.selectedLayerId) {
+      const sel = (frame.layers ?? []).find(l => l.id === opts.selectedLayerId);
+      if (sel) _drawSelection(ctx, sel, w, h);
+    }
+
+    // Composition guides
     if (opts.showSafeZone) _drawSafeZone(ctx, w, h);
     if (opts.guideType)    _drawGuide(ctx, w, h, opts.guideType);
   }
@@ -56,6 +67,43 @@ function _drawSafeZone(ctx, w, h) {
   ctx.lineWidth   = 1;
   ctx.setLineDash([4, 4]);
   ctx.strokeRect(w * m, h * m, w * (1 - 2 * m), h * (1 - 2 * m));
+  ctx.restore();
+}
+
+function _drawAllBounds(ctx, layers, w, h) {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(100,160,255,0.35)';
+  ctx.lineWidth   = 1;
+  ctx.setLineDash([3, 3]);
+  for (const layer of (layers ?? [])) {
+    if (layer.hidden) continue;
+    const b = computeLayerBounds(layer, w, h);
+    if (b.width > 0 && b.height > 0) {
+      ctx.strokeRect(b.x, b.y, b.width, b.height);
+    }
+  }
+  ctx.restore();
+}
+
+function _drawSelection(ctx, layer, w, h) {
+  const b = computeLayerBounds(layer, w, h);
+  if (b.width === 0 && b.height === 0) return;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(100,160,255,0.9)';
+  ctx.lineWidth   = 2;
+  ctx.setLineDash([]);
+  ctx.strokeRect(b.x, b.y, b.width, b.height);
+  // Corner handles
+  const hs = 6;
+  ctx.fillStyle = '#64a0ff';
+  for (const [cx, cy] of [
+    [b.x,           b.y],
+    [b.x + b.width, b.y],
+    [b.x,           b.y + b.height],
+    [b.x + b.width, b.y + b.height],
+  ]) {
+    ctx.fillRect(cx - hs / 2, cy - hs / 2, hs, hs);
+  }
   ctx.restore();
 }
 
