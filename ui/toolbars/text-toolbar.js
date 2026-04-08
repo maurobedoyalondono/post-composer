@@ -8,7 +8,6 @@
  * @param {import('../../editor/layer-manager.js').LayerManager} layerManager
  */
 export function renderTextToolbar(container, layer, frameIndex, layerManager) {
-  container.classList.remove('hidden');
   const font = layer.font ?? {};
 
   container.innerHTML = `

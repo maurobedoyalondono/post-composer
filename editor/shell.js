@@ -100,6 +100,9 @@ export function mountEditor(state) {
   events.addEventListener('layer:selected', () => {
     _updateContextToolbar(ctxToolbarEl, state, layerManager);
   });
+  events.addEventListener('layer:deleted', () => {
+    _updateContextToolbar(ctxToolbarEl, state, layerManager);
+  });
 
   // ── Repaint on events ──────────────────────────
   for (const ev of ['project:loaded', 'frame:changed', 'images:loaded', 'layer:changed', 'layer:deleted', 'layers:reordered']) {
@@ -122,6 +125,7 @@ function _updateContextToolbar(container, state, layerManager) {
     return;
   }
   container.innerHTML = '';
+  container.classList.remove('hidden');
   switch (layer.type) {
     case 'text':    renderTextToolbar(container, layer, state.activeFrameIndex, layerManager);    break;
     case 'shape':   renderShapeToolbar(container, layer, state.activeFrameIndex, layerManager);   break;

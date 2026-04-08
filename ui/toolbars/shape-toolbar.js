@@ -8,8 +8,6 @@
  * @param {import('../../editor/layer-manager.js').LayerManager} layerManager
  */
 export function renderShapeToolbar(container, layer, frameIndex, layerManager) {
-  container.classList.remove('hidden');
-
   container.innerHTML = `
     <label>Fill</label>
     <input type="color" id="ctx-shape-fill" value="${layer.fill ?? '#6366f1'}">

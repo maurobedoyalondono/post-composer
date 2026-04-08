@@ -8,8 +8,6 @@
  * @param {import('../../editor/layer-manager.js').LayerManager} layerManager
  */
 export function renderImageToolbar(container, layer, frameIndex, layerManager) {
-  container.classList.remove('hidden');
-
   container.innerHTML = `
     <label>Opacity</label>
     <input type="number" id="ctx-img-opacity" value="${Math.round((layer.opacity ?? 1) * 100)}" min="0" max="100" step="5" style="width:55px">

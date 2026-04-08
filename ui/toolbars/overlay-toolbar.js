@@ -8,7 +8,6 @@
  * @param {import('../../editor/layer-manager.js').LayerManager} layerManager
  */
 export function renderOverlayToolbar(container, layer, frameIndex, layerManager) {
-  container.classList.remove('hidden');
   const isGradient = !!layer.gradient?.enabled;
 
   container.innerHTML = `
