@@ -211,3 +211,28 @@ function _enforceVarietyContract(project, err) {
       err(`variety_contract: pattern "${pattern}" used ${count} times, exceeds 40% limit (${maxPatternAllowed} of ${frames.length} frames)`);
   }
 }
+
+/**
+ * Returns a structured summary of a valid project for display in the UI.
+ * Only call after validate() returns valid: true.
+ * @param {object} project
+ * @returns {{ frameCount: number, layerCount: number, patternDistribution: object, contractSummary: object }}
+ */
+export function summarise(project) {
+  const layerCount = project.frames.reduce((sum, f) => sum + (f.layers?.length ?? 0), 0);
+  const patternDistribution = {};
+  for (const frame of project.frames) {
+    const p = frame.composition_pattern;
+    patternDistribution[p] = (patternDistribution[p] ?? 0) + 1;
+  }
+  return {
+    frameCount: project.frames.length,
+    layerCount,
+    patternDistribution,
+    contractSummary: {
+      silenceMap:        project.variety_contract.silence_map,
+      overlayStrategies: project.variety_contract.overlay_strategies,
+      shapeWaiver:       project.variety_contract.shape_quota?.waiver ?? null,
+    },
+  };
+}

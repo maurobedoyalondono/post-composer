@@ -1,6 +1,6 @@
 // tests/shared/validator.test.js
 import { describe, it, assert, assertEqual } from '../test-helper.js';
-import { validate } from '../../shared/validator.js';
+import { validate, summarise } from '../../shared/validator.js';
 
 // Minimal valid project fixture used across all tests
 function minimal() {
@@ -227,5 +227,30 @@ describe('validator — variety contract enforcement', () => {
     p.frames = [frameWith({ layers: [textLayer()] })];
     const r = validate(p);
     assert(r.valid, r.errors?.join(', '));
+  });
+});
+
+describe('validator — summarise', () => {
+  it('returns correct frame and layer counts', () => {
+    const p = minimal();
+    p.frames = [
+      frameWith({ id: 'f1', image_filename: 'a.jpg', layers: [textLayer()] }),
+      frameWith({ id: 'f2', image_filename: 'b.jpg', composition_pattern: 'minimal-strip', layers: [] }),
+    ];
+    const s = summarise(p);
+    assertEqual(s.frameCount, 2);
+    assertEqual(s.layerCount, 1);
+  });
+
+  it('returns pattern distribution', () => {
+    const p = minimal();
+    p.frames = [
+      frameWith({ id: 'f1', image_filename: 'a.jpg', composition_pattern: 'editorial-anchor', layers: [] }),
+      frameWith({ id: 'f2', image_filename: 'b.jpg', composition_pattern: 'editorial-anchor', layers: [] }),
+      frameWith({ id: 'f3', image_filename: 'c.jpg', composition_pattern: 'full-bleed', layers: [] }),
+    ];
+    const s = summarise(p);
+    assertEqual(s.patternDistribution['editorial-anchor'], 2);
+    assertEqual(s.patternDistribution['full-bleed'], 1);
   });
 });
