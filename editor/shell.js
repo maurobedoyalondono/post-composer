@@ -115,7 +115,7 @@ export function mountEditor(state) {
     await Promise.all(toLoad.map(({ filename, src }) => new Promise(resolve => {
       const img = new Image();
       img.onload  = () => { state.images.set(filename, img); resolve(); };
-      img.onerror = () => resolve();
+      img.onerror = () => { console.warn(`[shell] Failed to load image: ${filename}`); resolve(); };
       img.src = src;
     })));
     events.dispatchEvent(new CustomEvent('images:loaded'));
@@ -126,8 +126,10 @@ export function mountEditor(state) {
   // Also run on subsequent back-and-forth navigations, then repaint to restore canvas
   events.addEventListener('view:changed', ({ detail }) => {
     if (detail.view === 'editor') {
+      // _applyActiveBrief is async; _repaint runs immediately with current state.
+      // images:loaded event triggers a second repaint once images finish loading.
       _applyActiveBrief();
-      _repaint(); // restore canvas state — no events fire on plain navigation
+      _repaint();
     }
   });
 
