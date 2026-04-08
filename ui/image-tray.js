@@ -26,7 +26,7 @@ export class ImageTray {
     this._el.innerHTML = `<div class="image-tray-grid">
       ${Array.from(images.entries()).map(([key, img]) => `
         <div class="image-tray-cell" title="${_esc(key)}">
-          <img src="${_esc(img.src)}" alt="${_esc(_basename(key))}">
+          <img src="${/^blob:/.test(img.src) ? _esc(img.src) : ''}" alt="${_esc(_basename(key))}">
           <span class="image-tray-label">${_esc(_basename(key))}</span>
         </div>
       `).join('')}
