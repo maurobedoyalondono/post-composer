@@ -3,6 +3,10 @@ import { FrameManager }         from './frame-manager.js';
 import { LayerManager }         from './layer-manager.js';
 import { DragResize }           from './drag-resize.js';
 import { renderer }             from './renderer.js';
+import { computeLayerBounds }   from './layers.js';
+import { relativeLuminance, contrastVsWhite, wcagLevel, sampleBoundsLuminance }
+                                from './analysis.js';
+import { exportFrame, exportAllFrames } from './export.js';
 import { Filmstrip }            from '../ui/filmstrip.js';
 import { Inspector }            from '../ui/inspector.js';
 import { LayersPanel }          from '../ui/layers-panel.js';
@@ -48,7 +52,17 @@ export function mountEditor(state) {
       showSafeZone:    state.prefs.showSafeZone,
       selectedLayerId: state.selectedLayerId,
       showLayerBounds: state.prefs.showLayerBounds,
+      analysisMode:    state.analysisMode,
     });
+
+    // Post-repaint WCAG dispatch: sample canvas at selected text layer bounds
+    const layerId = state.selectedLayerId;
+    const layer   = state.activeFrame?.layers?.find(l => l.id === layerId);
+    if (layer?.type === 'text') {
+      const bounds = computeLayerBounds(layer, canvasEl.width, canvasEl.height);
+      const result = sampleBoundsLuminance(canvasEl, bounds);
+      events.dispatchEvent(new CustomEvent('analysis:contrast', { detail: result }));
+    }
   }
 
   new DragResize(canvasEl, state, layerManager, _repaint);
@@ -117,12 +131,79 @@ export function mountEditor(state) {
     _repaint();
   });
 
+  // ── View strip: analysis modes (mutually exclusive) ──
+  const analysisModes = ['contrast', 'weight'];
+  analysisModes.forEach(mode => {
+    root.querySelector(`#btn-${mode}`).addEventListener('click', () => {
+      const next = state.analysisMode === mode ? null : mode;
+      state.setAnalysisMode(next);
+      analysisModes.forEach(m => {
+        root.querySelector(`#btn-${m}`).setAttribute('aria-pressed', m === next);
+      });
+      _repaint();
+    });
+  });
+
+  // ── View strip: export ─────────────────────
+  root.querySelector('#btn-export-frame').addEventListener('click', () => {
+    if (!state.activeFrame) return;
+    exportFrame(canvasEl, state.activeFrame.id);
+  });
+
+  root.querySelector('#btn-export-all').addEventListener('click', async () => {
+    if (!state.project) return;
+    const { skipped } = await exportAllFrames(
+      state.project.frames, state, renderer,
+      (i, total) => console.log(`Exporting ${i}/${total}...`)
+    );
+    if (skipped > 0) alert(`${skipped} frame(s) skipped — missing images.`);
+  });
+
   // ── View strip: layers panel toggle ────────
   const layersPanelBtn = root.querySelector('#btn-layers-panel');
   layersPanelBtn.addEventListener('click', () => {
     const isOpen = layersPanel.toggle();
     layersPanelBtn.setAttribute('aria-pressed', isOpen);
     layersPanelBtn.textContent = isOpen ? 'Layers ▼' : 'Layers ▲';
+  });
+
+  // ── Canvas: click-to-probe ─────────────────
+  let probePopover = null;
+  canvasEl.addEventListener('click', e => {
+    if (!state.project || !state.activeFrame) return;
+    const rect   = canvasEl.getBoundingClientRect();
+    const scaleX = canvasEl.width  / rect.width;
+    const scaleY = canvasEl.height / rect.height;
+    const cx     = Math.round((e.clientX - rect.left) * scaleX);
+    const cy     = Math.round((e.clientY - rect.top)  * scaleY);
+    const ctx    = canvasEl.getContext('2d');
+    const pixel  = ctx.getImageData(cx, cy, 1, 1).data;
+    const r = pixel[0], g = pixel[1], b = pixel[2];
+    const L     = relativeLuminance(r, g, b);
+    const ratio = contrastVsWhite(L);
+    const level = wcagLevel(ratio);
+
+    const canvasArea = root.querySelector('.editor-canvas-area');
+    if (!probePopover) {
+      probePopover = document.createElement('div');
+      probePopover.className = 'probe-popover';
+      canvasArea.appendChild(probePopover);
+    }
+    probePopover.textContent =
+      `RGB: ${r}, ${g}, ${b}\n` +
+      `Luminance: ${Math.round(L * 100)}%\n` +
+      `Contrast vs white: ${ratio.toFixed(1)}:1\n` +
+      `Level: ${level}`;
+
+    // Position near click, clamped so the popover doesn't overflow the area
+    const areaRect = canvasArea.getBoundingClientRect();
+    const pw = 180, ph = 72;
+    let px = e.clientX - areaRect.left + 14;
+    let py = e.clientY - areaRect.top  + 14;
+    if (px + pw > areaRect.width)  px = (e.clientX - areaRect.left) - pw - 14;
+    if (py + ph > areaRect.height) py = (e.clientY - areaRect.top)  - ph - 14;
+    probePopover.style.left = `${px}px`;
+    probePopover.style.top  = `${py}px`;
   });
 
   // ── Repaint on events ──────────────────────
@@ -199,6 +280,16 @@ function _buildHTML() {
         <div class="view-strip-group">
           <button id="btn-safe-zone"    class="btn view-strip-btn" aria-pressed="false" title="Safe zone">Safe Zone</button>
           <button id="btn-layer-bounds" class="btn view-strip-btn" aria-pressed="false" title="Layer bounds">Bounds</button>
+        </div>
+        <div class="view-strip-sep"></div>
+        <div class="view-strip-group">
+          <button id="btn-contrast" class="btn view-strip-btn" aria-pressed="false" title="Contrast map">Contrast</button>
+          <button id="btn-weight"   class="btn view-strip-btn" aria-pressed="false" title="Visual weight map">Weight</button>
+        </div>
+        <div class="view-strip-sep"></div>
+        <div class="view-strip-group">
+          <button id="btn-export-frame" class="btn view-strip-btn" title="Export current frame as PNG">Export Frame</button>
+          <button id="btn-export-all"   class="btn view-strip-btn" title="Export all frames as PNG">Export All</button>
         </div>
         <div class="view-strip-sep"></div>
         <div class="view-strip-group view-strip-right">
