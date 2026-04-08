@@ -127,14 +127,45 @@ function _renderImageLayer(ctx, layer, w, h, images) {
   const { x, y } = resolvePosition(layer.position, w, h);
   const iw = (layer.width_pct  ?? 100) / 100 * w;
   const ih = (layer.height_pct ?? 100) / 100 * h;
+  const fit = layer.fit ?? 'fill';
   ctx.save();
   ctx.globalAlpha = layer.opacity ?? 1;
-  ctx.drawImage(img, x, y, iw, ih);
+
+  if (fit === 'fill') {
+    ctx.drawImage(img, x, y, iw, ih);
+  } else if (fit === 'cover') {
+    const scale = Math.max(iw / img.naturalWidth, ih / img.naturalHeight);
+    const dw = img.naturalWidth  * scale;
+    const dh = img.naturalHeight * scale;
+    const dx = x + (iw - dw) / 2;
+    const dy = y + (ih - dh) / 2;
+    ctx.beginPath();
+    ctx.rect(x, y, iw, ih);
+    ctx.clip();
+    ctx.drawImage(img, dx, dy, dw, dh);
+  } else { // contain
+    const scale = Math.min(iw / img.naturalWidth, ih / img.naturalHeight);
+    const dw = img.naturalWidth  * scale;
+    const dh = img.naturalHeight * scale;
+    const dx = x + (iw - dw) / 2;
+    const dy = y + (ih - dh) / 2;
+    ctx.drawImage(img, dx, dy, dw, dh);
+  }
+
   ctx.restore();
 }
 
+const BLEND_MAP = {
+  'normal':     'source-over',
+  'multiply':   'multiply',
+  'screen':     'screen',
+  'overlay':    'overlay',
+  'soft-light': 'soft-light',
+};
+
 function _renderOverlayLayer(ctx, layer, w, h) {
   ctx.save();
+  ctx.globalCompositeOperation = BLEND_MAP[layer.blend_mode] ?? 'source-over';
   ctx.globalAlpha = layer.opacity ?? 0.6;
   if (layer.gradient?.enabled) {
     const grad = _buildGradient(ctx, layer.gradient, w, h);
@@ -165,6 +196,14 @@ function _renderTextLayer(ctx, layer, w, h) {
   const sizePx   = (layer.font?.size_pct ?? 5) / 100 * h;
   const maxW     = (layer.max_width_pct ?? 80) / 100 * w;
   ctx.save();
+  // Shadow — compose color+opacity into a single rgba value
+  if (layer.shadow?.enabled) {
+    const sc = _hexToRgba(layer.shadow.color ?? '#000000', layer.shadow.opacity ?? 0.6);
+    ctx.shadowColor   = sc;
+    ctx.shadowBlur    = layer.shadow.blur_px ?? 8;
+    ctx.shadowOffsetX = layer.shadow.offset_x ?? 2;
+    ctx.shadowOffsetY = layer.shadow.offset_y ?? 2;
+  }
   ctx.globalAlpha  = layer.opacity ?? 1;
   ctx.fillStyle    = layer.font?.color ?? '#ffffff';
   ctx.font         = buildFontString(layer.font ?? {}, sizePx);
@@ -266,4 +305,12 @@ function _renderLogoLayer(ctx, layer, w, h, images) {
   ctx.globalAlpha = layer.opacity ?? 1;
   ctx.drawImage(img, x, y, lw, lh);
   ctx.restore();
+}
+
+function _hexToRgba(hex, alpha) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
 }
