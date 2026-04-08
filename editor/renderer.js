@@ -1,5 +1,9 @@
 // editor/renderer.js
 import { renderLayer, computeLayerBounds } from './layers.js';
+import {
+  computeContrastMap, computeWeightMap,
+  computeCenterOfMass, drawCenterOfMass,
+} from './analysis.js';
 
 /**
  * Renders a full post-composer frame to an HTMLCanvasElement.
@@ -15,6 +19,7 @@ export class Renderer {
    * @param {string|null} [opts.guideType] — 'thirds', 'phi', 'cross', or null
    * @param {string|null} [opts.selectedLayerId] — id of the currently selected layer
    * @param {boolean} [opts.showLayerBounds] — draw bounding boxes for all visible layers
+   * @param {string|null} [opts.analysisMode] — 'contrast', 'weight', or null
    */
   renderFrame(canvas, frame, project, images, opts = {}) {
     const ctx = canvas.getContext('2d');
@@ -48,6 +53,20 @@ export class Renderer {
     // Composition guides
     if (opts.showSafeZone) _drawSafeZone(ctx, w, h);
     if (opts.guideType)    _drawGuide(ctx, w, h, opts.guideType);
+
+    // Analysis overlay — reads fully composed pixels, writes RGBA overlay
+    if (opts.analysisMode) {
+      const imageData = ctx.getImageData(0, 0, w, h);
+      if (opts.analysisMode === 'contrast') {
+        const overlay = computeContrastMap(imageData);
+        ctx.putImageData(new ImageData(overlay, w, h), 0, 0);
+      } else if (opts.analysisMode === 'weight') {
+        const { weights, overlay } = computeWeightMap(imageData);
+        ctx.putImageData(new ImageData(overlay, w, h), 0, 0);
+        const { x, y } = computeCenterOfMass(weights, w, h);
+        drawCenterOfMass(ctx, x, y);
+      }
+    }
   }
 }
 
