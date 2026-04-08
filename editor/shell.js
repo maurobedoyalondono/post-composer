@@ -14,6 +14,7 @@ import { ImageTray }            from '../ui/image-tray.js';
 import { events }               from '../core/events.js';
 import { router }               from '../core/router.js';
 import { loadProjectFonts }     from '../shared/fonts.js';
+import { storage }              from '../core/storage.js';
 
 /**
  * Mount the editor shell into #editor-view.
@@ -86,6 +87,50 @@ export function mountEditor(state) {
     }
   });
 
+  // ── Auto-load brief context (runs on mount and on subsequent navigations) ─
+  async function _applyActiveBrief() {
+    if (!state.activeBriefId) return;
+    const brief = storage.getBrief(state.activeBriefId);
+    if (!brief) return;
+
+    // Update header only when no project is loaded yet
+    if (!state.project) {
+      nameEl.textContent = `${brief.title} — load JSON to begin`;
+      nameEl.classList.add('no-project');
+    }
+
+    // Collect images from both sources: brief wizard uploads + editor-loaded images
+    const sources = [
+      ...(brief.imageMeta ?? [])
+        .filter(m => m.dataUrl)
+        .map(m => ({ filename: m.filename, src: m.dataUrl })),
+      ...Object.entries(storage.loadImages(state.activeBriefId))
+        .map(([filename, src]) => ({ filename, src })),
+    ];
+
+    // Only load images not already in state.images
+    const toLoad = sources.filter(({ filename }) => !state.images.has(filename));
+    if (!toLoad.length) return;
+
+    await Promise.all(toLoad.map(({ filename, src }) => new Promise(resolve => {
+      const img = new Image();
+      img.onload  = () => { state.images.set(filename, img); resolve(); };
+      img.onerror = () => resolve();
+      img.src = src;
+    })));
+    events.dispatchEvent(new CustomEvent('images:loaded'));
+  }
+  // Run immediately on mount (editor is lazy-mounted inside view:changed, so the
+  // event has already fired by the time we get here)
+  _applyActiveBrief();
+  // Also run on subsequent back-and-forth navigations, then repaint to restore canvas
+  events.addEventListener('view:changed', ({ detail }) => {
+    if (detail.view === 'editor') {
+      _applyActiveBrief();
+      _repaint(); // restore canvas state — no events fire on plain navigation
+    }
+  });
+
   // ── Header: file inputs ─────────────────────
   const jsonInput = root.querySelector('#input-json');
   const imgInput  = root.querySelector('#input-images');
@@ -98,6 +143,8 @@ export function mountEditor(state) {
       const data = JSON.parse(text);
       frameManager.loadProject(data);
       await loadProjectFonts(data.design_tokens);
+      // Ensure brief images are loaded for this project (loads any that are missing)
+      await _applyActiveBrief();
     } catch (err) {
       alert(`Failed to load project: ${err.message}`);
     }
@@ -109,6 +156,15 @@ export function mountEditor(state) {
     if (!files.length) return;
     try {
       await frameManager.loadImages(files);
+      // Persist to localStorage so images survive reload and tab close
+      if (state.activeBriefId) {
+        const imageMap = {};
+        files.forEach(f => {
+          const img = state.images.get(f.name);
+          if (img?.src) imageMap[f.name] = img.src;
+        });
+        storage.saveImages(state.activeBriefId, imageMap);
+      }
     } catch (err) {
       console.warn('Image load error:', err);
     }
@@ -175,10 +231,18 @@ export function mountEditor(state) {
     layersPanelBtn.textContent = isOpen ? 'Layers ▼' : 'Layers ▲';
   });
 
-  // ── Canvas: click-to-probe ─────────────────
+  // ── Canvas: click-to-probe (right-click or Escape to dismiss) ─
   let probePopover = null;
+  const _dismissProbe = () => {
+    if (probePopover) { probePopover.remove(); probePopover = null; }
+  };
+
   canvasEl.addEventListener('click', e => {
     if (!state.project || !state.activeFrame) return;
+
+    // Right-click or clicking an existing popover dismisses it
+    if (probePopover) { _dismissProbe(); return; }
+
     const rect   = canvasEl.getBoundingClientRect();
     const scaleX = canvasEl.width  / rect.width;
     const scaleY = canvasEl.height / rect.height;
@@ -192,11 +256,11 @@ export function mountEditor(state) {
     const level = wcagLevel(ratio);
 
     const canvasArea = root.querySelector('.editor-canvas-area');
-    if (!probePopover) {
-      probePopover = document.createElement('div');
-      probePopover.className = 'probe-popover';
-      canvasArea.appendChild(probePopover);
-    }
+    probePopover = document.createElement('div');
+    probePopover.className = 'probe-popover';
+    probePopover.title = 'Click canvas to dismiss';
+    canvasArea.appendChild(probePopover);
+
     probePopover.textContent =
       `RGB: ${r}, ${g}, ${b}\n` +
       `Luminance: ${Math.round(L * 100)}%\n` +
@@ -212,6 +276,32 @@ export function mountEditor(state) {
     if (py + ph > areaRect.height) py = (e.clientY - areaRect.top)  - ph - 14;
     probePopover.style.left = `${px}px`;
     probePopover.style.top  = `${py}px`;
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') _dismissProbe();
+  });
+
+  // ── Canvas: drag image from tray ───────────
+  canvasEl.addEventListener('dragover', e => {
+    if (!state.project || !state.activeFrame) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    canvasEl.classList.add('drag-over');
+  });
+  canvasEl.addEventListener('dragleave', () => canvasEl.classList.remove('drag-over'));
+  canvasEl.addEventListener('drop', e => {
+    e.preventDefault();
+    canvasEl.classList.remove('drag-over');
+    if (!state.project || !state.activeFrame) return;
+    const filename = e.dataTransfer.getData('text/plain');
+    if (!filename || !state.images.has(filename)) return;
+    state.activeFrame.image_filename = filename;
+    const indexEntry = (state.project.image_index ?? []).find(i => i.filename === filename);
+    if (indexEntry) state.activeFrame.image_src = indexEntry.label;
+    events.dispatchEvent(new CustomEvent('frame:changed', {
+      detail: { index: state.activeFrameIndex, frame: state.activeFrame },
+    }));
   });
 
   // ── Repaint on events ──────────────────────
