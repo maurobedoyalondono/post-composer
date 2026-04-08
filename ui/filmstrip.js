@@ -19,9 +19,16 @@ export class Filmstrip {
     this._state        = state;
     this._items        = []; // Array of { el, canvas }
 
-    events.addEventListener('project:loaded',  () => this._build());
-    events.addEventListener('images:loaded',   () => this._renderAll());
-    events.addEventListener('frame:changed',   e  => this._setActive(e.detail.index));
+    events.addEventListener('project:loaded',   () => this._build());
+    events.addEventListener('images:loaded',    () => this._renderAll());
+    events.addEventListener('frame:changed',    e  => {
+      this._setActive(e.detail.index);
+      this._renderFrame(e.detail.index);
+    });
+    // Re-render the active frame thumbnail on any layer mutation
+    events.addEventListener('layer:changed',    () => this._renderFrame(this._state.activeFrameIndex));
+    events.addEventListener('layer:deleted',    () => this._renderFrame(this._state.activeFrameIndex));
+    events.addEventListener('layers:reordered', () => this._renderFrame(this._state.activeFrameIndex));
   }
 
   /** Build DOM items from current project frames. */
@@ -68,6 +75,15 @@ export class Filmstrip {
     this._items.forEach(({ canvas }, i) => {
       renderer.renderFrame(canvas, project.frames[i], project, this._state.images);
     });
+  }
+
+  /** Re-render one thumbnail by frame index. */
+  _renderFrame(index) {
+    const project = this._state.project;
+    if (!project) return;
+    const item = this._items[index];
+    if (!item) return;
+    renderer.renderFrame(item.canvas, project.frames[index], project, this._state.images);
   }
 
   /** Mark one item active, remove from others. */
