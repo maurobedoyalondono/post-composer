@@ -4,11 +4,11 @@ import { events } from '../core/events.js';
 /**
  * Floating layer list panel.
  * Shows layers for the active frame in reverse render order (top layer first).
- * Supports: click-to-select, visibility toggle, delete, drag-to-reorder.
+ * Supports: click-to-select, visibility toggle, delete, drag-to-reorder, drag-by-header.
  */
 export class LayersPanel {
   /**
-   * @param {HTMLElement} container — the .layers-panel element
+   * @param {HTMLElement} container — .layers-panel element (appended to body by shell)
    * @param {import('../core/state.js').AppState} state
    * @param {import('../editor/layer-manager.js').LayerManager} layerManager
    */
@@ -27,6 +27,26 @@ export class LayersPanel {
     this._el.addEventListener('dragstart', e => this._onDragStart(e));
     this._el.addEventListener('dragover', e => e.preventDefault());
     this._el.addEventListener('drop', e => this._onDrop(e));
+
+    this._initDrag();
+  }
+
+  /** Show the panel. Returns true. */
+  show() {
+    this._el.classList.add('open');
+    return true;
+  }
+
+  /** Hide the panel. Returns false. */
+  hide() {
+    this._el.classList.remove('open');
+    return false;
+  }
+
+  /** Toggle open/closed. Returns the new open state (true = open). */
+  toggle() {
+    const isOpen = this._el.classList.toggle('open');
+    return isOpen;
   }
 
   _render() {
@@ -36,6 +56,7 @@ export class LayersPanel {
         <div class="layers-panel-header">Layers</div>
         <div class="layers-panel-empty">No layers</div>
       `;
+      this._initDrag();
       return;
     }
 
@@ -57,7 +78,39 @@ export class LayersPanel {
         }).join('')}
       </ul>
     `;
-    // No per-item event listeners — delegation handles it all
+    this._initDrag();
+  }
+
+  /** Wire drag-by-header so the panel can be repositioned. */
+  _initDrag() {
+    const header = this._el.querySelector('.layers-panel-header');
+    if (!header) return;
+
+    let startX, startY, origLeft, origTop;
+
+    const onMouseMove = e => {
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      this._el.style.left   = `${origLeft + dx}px`;
+      this._el.style.top    = `${origTop  + dy}px`;
+      this._el.style.bottom = 'auto';
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup',   onMouseUp);
+    };
+
+    header.addEventListener('mousedown', e => {
+      const rect = this._el.getBoundingClientRect();
+      startX   = e.clientX;
+      startY   = e.clientY;
+      origLeft = rect.left;
+      origTop  = rect.top;
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup',   onMouseUp);
+      e.preventDefault();
+    });
   }
 
   _onClick(e) {
