@@ -38,8 +38,6 @@ export class LayersPanel {
     this._el.addEventListener('dragstart', e => this._onDragStart(e));
     this._el.addEventListener('dragover', e => e.preventDefault());
     this._el.addEventListener('drop', e => this._onDrop(e));
-
-    this._initDrag();
   }
 
   /** Show the panel. Returns true. */
@@ -67,6 +65,7 @@ export class LayersPanel {
         <div class="layers-panel-header">Layers</div>
         <div class="layers-panel-empty">No layers</div>
       `;
+      // Re-wire drag: innerHTML replacement creates a new header element each time.
       this._initDrag();
       return;
     }
@@ -89,6 +88,7 @@ export class LayersPanel {
         }).join('')}
       </ul>
     `;
+    // Re-wire drag: innerHTML replacement creates a new header element each time.
     this._initDrag();
   }
 
