@@ -54,6 +54,47 @@ export function computeTextBounds(ctx, layer, w, h) {
 }
 
 /**
+ * Compute the bounding box of a layer in canvas coordinates.
+ * Does not require a canvas context — text height is approximated as 2 lines.
+ * @param {object} layer
+ * @param {number} w — canvas width
+ * @param {number} h — canvas height
+ * @returns {{ x: number, y: number, width: number, height: number }}
+ */
+export function computeLayerBounds(layer, w, h) {
+  if (layer.type === 'overlay') {
+    return { x: 0, y: 0, width: w, height: h };
+  }
+  const { x, y } = resolvePosition(layer.position, w, h);
+  switch (layer.type) {
+    case 'text': {
+      const maxW   = (layer.max_width_pct ?? 80) / 100 * w;
+      const sizePx = (layer.font?.size_pct ?? 5) / 100 * h;
+      const lineH  = sizePx * (layer.font?.line_height ?? 1.25);
+      return { x, y, width: maxW, height: lineH * 2 };
+    }
+    case 'stats_block': {
+      const sizePx = (layer.font?.size_pct ?? 4) / 100 * h;
+      const lineH  = sizePx * 1.6;
+      return { x, y, width: w * 0.4, height: lineH * (layer.stats?.length ?? 1) };
+    }
+    case 'image':
+    case 'logo': {
+      const bw = (layer.width_pct  ?? 100) / 100 * w;
+      const bh = (layer.height_pct ?? 100) / 100 * h;
+      return { x, y, width: bw, height: bh };
+    }
+    case 'shape': {
+      const bw = (layer.width_pct  ?? 20) / 100 * w;
+      const bh = (layer.height_pct ??  5) / 100 * h;
+      return { x, y, width: bw, height: bh };
+    }
+    default:
+      return { x, y, width: 0, height: 0 };
+  }
+}
+
+/**
  * Render a single layer onto the canvas context.
  * @param {CanvasRenderingContext2D} ctx
  * @param {object} layer
