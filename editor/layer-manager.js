@@ -1,6 +1,9 @@
 // editor/layer-manager.js
 import { events } from '../core/events.js';
 
+/** Module-level clipboard for layer copy/paste. */
+let _clipboard = null;
+
 /**
  * Manages layer CRUD and selection for the active project.
  * All mutations go through here so the event bus stays consistent.
@@ -82,5 +85,48 @@ export class LayerManager {
    */
   emitChanged(frameIndex, layerId) {
     events.dispatchEvent(new CustomEvent('layer:changed', { detail: { frameIndex, layerId } }));
+  }
+
+  // ── Copy / Paste ───────────────────────────────────────────────────────
+
+  /**
+   * Deep-clone a layer into the module-level clipboard.
+   * Silent — no event emitted.
+   */
+  copyLayer(frameIndex, layerId) {
+    const frame = this._state.project?.frames?.[frameIndex];
+    if (!frame) return;
+    const layer = frame.layers?.find(l => l.id === layerId);
+    if (!layer) return;
+    _clipboard = JSON.parse(JSON.stringify(layer));
+  }
+
+  /**
+   * Paste the clipboard layer into a frame.
+   * Assigns a new id and offsets position by +2% so paste is visible.
+   * Emits: layer:changed
+   */
+  pasteLayer(frameIndex) {
+    if (!_clipboard) return;
+    const frame = this._state.project?.frames?.[frameIndex];
+    if (!frame) return;
+    const clone = JSON.parse(JSON.stringify(_clipboard));
+    clone.id = `${_clipboard.id}-copy-${Date.now()}`;
+    if (clone.position && clone.position.zone !== 'absolute') {
+      clone.position.offset_x_pct = (clone.position.offset_x_pct ?? 0) + 2;
+      clone.position.offset_y_pct = (clone.position.offset_y_pct ?? 0) + 2;
+    } else if (clone.position?.zone === 'absolute') {
+      clone.position.x_pct = (clone.position.x_pct ?? 0) + 2;
+      clone.position.y_pct = (clone.position.y_pct ?? 0) + 2;
+    }
+    frame.layers = frame.layers ?? [];
+    frame.layers.push(clone);
+    this.selectLayer(clone.id);
+    events.dispatchEvent(new CustomEvent('layer:changed', { detail: { frameIndex, layerId: clone.id } }));
+  }
+
+  /** Returns true when the clipboard has a layer ready to paste. */
+  hasClipboard() {
+    return !!_clipboard;
   }
 }
