@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Integration smoke test</title>
+  <style>body{background:#0d0f1a;color:#e2e8f0;font-family:system-ui;padding:24px;}</style>
+</head>
+<body>
+  <h2 style="color:#a5b4fc">Integration Smoke Test</h2>
+  <div id="log"></div>
+  <script type="module">
+    import { AppState }  from '../core/state.js';
+    import { events }    from '../core/events.js';
+    import { Router }    from '../core/router.js';
+    import { storage }   from '../core/storage.js';
+    import { validate }  from '../shared/validator.js';
+    import { loadFont }  from '../shared/fonts.js';
+
+    const log = document.getElementById('log');
+    function ok(msg)   { log.innerHTML += `<div style="color:#10b981">✓ ${msg}</div>`; }
+    function fail(msg) { log.innerHTML += `<div style="color:#ef4444">✗ ${msg}</div>`; }
+
+    // 1. AppState
+    const state = new AppState();
+    state.view === 'manager' ? ok('AppState initialised') : fail('AppState bad initial view');
+
+    // 2. Event bus
+    let got = false;
+    events.addEventListener('smoke:test', () => got = true);
+    events.dispatchEvent(new CustomEvent('smoke:test'));
+    got ? ok('Event bus working') : fail('Event bus not working');
+
+    // 3. Router
+    document.body.insertAdjacentHTML('beforeend', '<div id="manager-view" hidden></div><div id="editor-view" hidden></div>');
+    const router = new Router('manager-view', 'editor-view');
+    router.init(state);
+    router.navigate('editor');
+    !document.getElementById('editor-view').hidden ? ok('Router: editor visible') : fail('Router: editor not visible');
+    document.getElementById('manager-view').hidden ? ok('Router: manager hidden') : fail('Router: manager not hidden');
+
+    // 4. Storage
+    storage.saveProject({ id: '__smoke__', title: 'smoke', frames: [] });
+    const loaded = storage.getProject('__smoke__');
+    loaded?.title === 'smoke' ? ok('Storage: save/load working') : fail('Storage: save/load failed');
+    storage.deleteProject('__smoke__');
+    !storage.getProject('__smoke__') ? ok('Storage: delete working') : fail('Storage: delete failed');
+
+    // 5. Validator
+    const proj = {
+      project: { id: 'smoke-test', title: 'Smoke', version: '1.0', created: '2026-04-08' },
+      export: { target: 'instagram-portrait', width_px: 1080, height_px: 1350, dpi: 72, scale_factor: 2, format: 'png' },
+      design_tokens: {
+        palette: { background: '#000000', primary: '#ffffff', accent: '#ff0000', neutral: '#888888' },
+        type_scale: {
+          display: { family: 'Cormorant Garamond', weight: 700, steps: { xl: 12, lg: 10, md: 8, sm: 6 } },
+          body:    { family: 'Inter', weight: 400, steps: { md: 3.5, sm: 3.0, xs: 2.5 } },
+          data:    { family: 'Inter', weight: 700, steps: { xl: 16, lg: 12, md: 8, sm: 5 } },
+        },
+        spacing_scale: [4, 6, 8],
+      },
+      variety_contract: {
+        zone_max_usage_pct: 40, shape_quota: { min_per_n_frames: 3, waiver: null },
+        overlay_strategies: ['gradient'], overlay_strategies_min: 1,
+        accent_color_frames: [], accent_color_min: 0,
+        copy_tone_variety: false, silence_map: [], composition_patterns: {},
+      },
+      globals: { background_color: '#000000', safe_zone_pct: 5 },
+      frames: [], image_index: [],
+    };
+    const result = validate(proj);
+    result.valid ? ok('Validator: valid project accepted') : fail('Validator: rejected valid project — ' + result.errors[0]);
+
+    // 6. Fonts
+    try {
+      await loadFont('Inter', [400, 700]);
+      ok('Fonts: Inter loaded from Google Fonts');
+    } catch(e) {
+      fail('Fonts: ' + e.message);
+    }
+  </script>
+</body>
+</html>
