@@ -12,7 +12,7 @@ async function init() {
   router.init(state);
 
   events.addEventListener('view:changed', e => {
-    if (e.detail === 'editor' && !editorMounted) {
+    if (e.detail.view === 'editor' && !editorMounted) {
       mountEditor(state);
       editorMounted = true;
     }
