@@ -1,0 +1,96 @@
+/* styles/components.css — Reusable UI components */
+
+/* ── Buttons ─────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  background: var(--color-surface);
+  border-color: var(--color-accent);
+}
+
+.btn.btn-primary {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #fff;
+}
+
+.btn.btn-primary:hover {
+  opacity: 0.9;
+}
+
+.btn.btn-active,
+.btn[aria-pressed="true"] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #fff;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Composition pattern badge ───────────── */
+.pattern-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--color-surface-2);
+  color: var(--color-accent-2);
+  border: 1px solid var(--color-accent);
+}
+
+/* ── Filmstrip thumbnail ─────────────────── */
+.filmstrip-item {
+  position: relative;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 2px solid transparent;
+  transition: border-color 0.1s;
+}
+
+.filmstrip-item:hover {
+  border-color: var(--color-accent-2);
+}
+
+.filmstrip-item.active {
+  border-color: var(--color-accent);
+}
+
+.filmstrip-item canvas {
+  display: block;
+}
+
+.filmstrip-item .frame-num {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: var(--font-mono);
+  pointer-events: none;
+}
+
+/* ── File input hidden + label-styled ───── */
+.file-input-hidden {
+  display: none;
+}
