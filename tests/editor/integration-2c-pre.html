@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Editor UI Redesign — Smoke Test (2c-pre)</title>
+  <style>
+    body { background:#0d0f1a; color:#e2e8f0; font-family:system-ui,sans-serif; padding:24px; }
+    h1   { color:#a5b4fc; margin-bottom:8px; }
+    .pass { color:#10b981; } .fail { color:#ef4444; }
+  </style>
+</head>
+<body>
+  <h1>Editor UI Redesign — Smoke Test (2c-pre)</h1>
+  <div id="results"></div>
+
+  <script type="module">
+    import { AppState }     from '../../core/state.js';
+    import { LayerManager } from '../../editor/layer-manager.js';
+    import { LayersPanel }  from '../../ui/layers-panel.js';
+    import { ImageTray }    from '../../ui/image-tray.js';
+    import { Inspector }    from '../../ui/inspector.js';
+    import { events }       from '../../core/events.js';
+
+    const results = document.getElementById('results');
+    let passed = 0, failed = 0;
+
+    function check(label, condition) {
+      const ok = !!condition;
+      if (ok) passed++; else failed++;
+      results.innerHTML += `<div class="${ok ? 'pass' : 'fail'}">[${ok ? 'PASS' : 'FAIL'}] ${label}</div>`;
+    }
+
+    // ── Minimal project ────────────────────────────────────────────────────
+    const project = {
+      project:  { id: 'test-2c-pre', title: 'Redesign Test' },
+      export:   { target: 'instagram-square', width_px: 1080, height_px: 1080 },
+      design_tokens: {
+        palette: { background: '#000000', primary: '#ffffff', accent: '#6366f1', neutral: '#6b7280' },
+        type_scale: { display: { family: 'sans-serif', steps: [48] }, body: { family: 'sans-serif', steps: [16] }, data: { family: 'sans-serif', steps: [12] } },
+        spacing_scale: [8, 16, 24],
+      },
+      variety_contract: { zone_max_usage_pct: 60, shape_quota: { min_per_n_frames: 3, waiver: true }, overlay_strategies: ['gradient'], silence_map: [], composition_patterns: {} },
+      frames: [{
+        id: 'f1',
+        image_src: '',
+        image_filename: 'test.jpg',
+        composition_pattern: 'full-bleed',
+        layers: [
+          { id: 'layer-text', type: 'text', content: 'Hello', font: { size_pct: 5, line_height: 1.25 }, max_width_pct: 80, position: { zone: 'top-left' } },
+          { id: 'layer-shape', type: 'shape', shape: 'rect', role: 'divider', position: { zone: 'bottom-left' }, width_pct: 50, height_pct: 5 },
+        ],
+      }],
+    };
+
+    const state = new AppState();
+    state.setProject(project);
+    const lm = new LayerManager(state);
+
+    // ── Check 1: LayersPanel show/hide/toggle ──────────────────────────────
+    const panelEl = document.createElement('div');
+    panelEl.className = 'layers-panel';
+    document.body.appendChild(panelEl);
+    const lp = new LayersPanel(panelEl, state, lm);
+
+    check('LayersPanel.show() returns true',  lp.show() === true);
+    check('LayersPanel panel has class open after show', panelEl.classList.contains('open'));
+    check('LayersPanel.hide() returns false', lp.hide() === false);
+    check('LayersPanel panel lacks class open after hide', !panelEl.classList.contains('open'));
+    check('LayersPanel.toggle() opens and returns true', lp.toggle() === true);
+    check('LayersPanel.toggle() closes and returns false', lp.toggle() === false);
+
+    // ── Check 2: ImageTray renders empty state ──────────────────────────────
+    const trayEl = document.createElement('div');
+    const it = new ImageTray(trayEl, state);
+    check('ImageTray shows empty state when no images', trayEl.innerHTML.includes('No images'));
+
+    // ── Check 3: ImageTray renders images on images:loaded ──────────────────
+    const img = new Image();
+    img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    img.onload = () => {
+      state.images.set('test-image.jpg', img);
+      events.dispatchEvent(new CustomEvent('images:loaded'));
+      check('ImageTray shows image cells after images:loaded', trayEl.querySelector('.image-tray-cell') !== null);
+      check('ImageTray shows image label', trayEl.innerHTML.includes('test-image.jpg'));
+
+      // ── Check 4: Inspector renders layer controls ──────────────────────────
+      const inspEl = document.createElement('div');
+      const insp = new Inspector(inspEl, state, lm);
+      lm.selectLayer('layer-text');
+
+      check('Inspector renders layer type badge for text', inspEl.innerHTML.includes('layer-type-text'));
+      check('Inspector renders WCAG badge slot', inspEl.querySelector('#insp-wcag-badge') !== null);
+      check('Inspector renders insp-layer-controls', inspEl.querySelector('#insp-layer-controls') !== null);
+
+      lm.selectLayer('layer-shape');
+      check('Inspector renders layer type badge for shape', inspEl.innerHTML.includes('layer-type-shape'));
+
+      // ── Check 5: analysis:contrast updates WCAG badge ──────────────────────
+      lm.selectLayer('layer-text');
+      const badge = inspEl.querySelector('#insp-wcag-badge');
+      events.dispatchEvent(new CustomEvent('analysis:contrast', { detail: { ratio: 4.8, level: 'AA' } }));
+      check('WCAG badge text updates on analysis:contrast', badge?.textContent === 'AA');
+      check('WCAG badge gains wcag-aa class', badge?.classList.contains('wcag-aa'));
+
+      // ── Summary ───────────────────────────────────────────────────────────
+      results.innerHTML += `<hr><b>${passed} passed, ${failed} failed</b>`;
+    };
+  </script>
+</body>
+</html>
