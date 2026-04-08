@@ -1,5 +1,19 @@
 // shared/fonts.js
 // Loads Google Fonts by family name. Caches loaded families to avoid duplicate requests.
+
+/**
+ * Build a CSS font string from a layer font object and a resolved pixel size.
+ * @param {object} font — { family, weight, style }; all fields optional
+ * @param {number} sizePx — resolved pixel size (caller computes from size_pct)
+ * @returns {string} — e.g. "italic 700 24px Inter"
+ */
+export function buildFontString(font, sizePx) {
+  const style  = font?.style  ?? 'normal';
+  const weight = font?.weight ?? 400;
+  const family = font?.family ?? 'sans-serif';
+  return `${style} ${weight} ${sizePx}px ${family}`;
+}
+
 const loaded = new Set();
 
 /**
