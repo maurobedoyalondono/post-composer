@@ -95,6 +95,9 @@ export function computeWeightMap(imageData) {
     const L   = 0.2126 * R + 0.7152 * G + 0.0722 * B;
     const max = Math.max(R, G, B);
     const min = Math.min(R, G, B);
+    // Saturation computed in linear-light space (approximation — perceptually
+    // equivalent to sRGB HSV saturation for fully-saturated colours, slightly
+    // distorted for mid-range colours, which is acceptable for a weight heatmap).
     const sat = max === 0 ? 0 : (max - min) / max;
     const w   = (1 - L) * 0.7 + sat * 0.3;
     weights[i] = w;
@@ -132,6 +135,7 @@ export function computeCenterOfMass(weights, W, H) {
 /**
  * Draw a 12px crosshair with a 4px dot at the centre of mass.
  * White stroke over a dark shadow for visibility on any background.
+ * Rendering helper — covered by integration tests, not unit tests.
  * @param {CanvasRenderingContext2D} ctx
  * @param {number} x
  * @param {number} y
@@ -167,6 +171,8 @@ export function drawCenterOfMass(ctx, x, y) {
  * @param {HTMLCanvasElement} canvas — must already be rendered
  * @param {{ x: number, y: number, width: number, height: number }} bounds
  * @returns {{ ratio: number, level: string }}
+ * @note Contrast is measured against white only. Accurate for text on light or
+ *       mid-tone backgrounds; will overstate contrast for text on dark backgrounds.
  */
 export function sampleBoundsLuminance(canvas, bounds) {
   const { x, y, width, height } = bounds;

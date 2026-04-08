@@ -65,6 +65,7 @@ describe('computeContrastMap', () => {
     assertEqual(out[0], 239, 'R should be 239 (#ef)');
     assertEqual(out[1], 68,  'G should be 68 (#44)');
     assertEqual(out[2], 68,  'B should be 68 (#44)');
+    assertEqual(out[3], 115, 'alpha should be 115 (0.45 * 255)');
   });
   it('pure black input → AAA (dark green #14532d overlay)', () => {
     const data = new Uint8ClampedArray([0, 0, 0, 255]);
@@ -73,6 +74,7 @@ describe('computeContrastMap', () => {
     assertEqual(out[0], 20, 'R should be 20 (#14)');
     assertEqual(out[1], 83, 'G should be 83 (#53)');
     assertEqual(out[2], 45, 'B should be 45 (#2d)');
+    assertEqual(out[3], 115, 'alpha should be 115 (0.45 * 255)');
   });
   it('returns Uint8ClampedArray with same pixel count * 4', () => {
     const data = new Uint8ClampedArray(4 * 4 * 4).fill(128);
