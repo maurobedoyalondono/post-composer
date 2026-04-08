@@ -385,3 +385,34 @@
   cursor: move;
   user-select: none;
 }
+
+/* ── Probe popover ──────────────────────────────────────────── */
+.probe-popover {
+  position: absolute;
+  background: rgba(10, 10, 20, 0.92);
+  color: #e2e8f0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 50;
+  white-space: pre;
+  line-height: 1.6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* ── WCAG badge colours ─────────────────────────────────────── */
+.wcag-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.wcag-aaa      { background: #14532d; color: #4ade80; }
+.wcag-aa       { background: #166534; color: #86efac; }
+.wcag-aa-large { background: #713f12; color: #fde68a; }
+.wcag-fail     { background: #7f1d1d; color: #fca5a5; }
