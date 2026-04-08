@@ -21,6 +21,12 @@ export class LayersPanel {
       events.addEventListener(ev, () => this._render());
     }
     events.addEventListener('layer:selected', () => this._syncActive());
+
+    // Event delegation — one listener per event type, wired once
+    this._el.addEventListener('click', e => this._onClick(e));
+    this._el.addEventListener('dragstart', e => this._onDragStart(e));
+    this._el.addEventListener('dragover', e => e.preventDefault());
+    this._el.addEventListener('drop', e => this._onDrop(e));
   }
 
   _render() {
@@ -33,7 +39,6 @@ export class LayersPanel {
       return;
     }
 
-    // Display layers in reverse order: visually "top" layer first
     const layers = [...frame.layers].reverse();
     const selectedId = this._state.selectedLayerId;
 
@@ -52,44 +57,44 @@ export class LayersPanel {
         }).join('')}
       </ul>
     `;
-
-    this._el.querySelectorAll('.layer-item').forEach(item => {
-      item.addEventListener('click', () => this._lm.selectLayer(item.dataset.id));
-
-      item.addEventListener('dragstart', e => {
-        e.dataTransfer.setData('text/plain', item.dataset.idx);
-        e.dataTransfer.effectAllowed = 'move';
-      });
-      item.addEventListener('dragover', e => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-      });
-      item.addEventListener('drop', e => {
-        e.preventDefault();
-        const fromIdx = parseInt(e.dataTransfer.getData('text/plain'), 10);
-        const toIdx   = parseInt(item.dataset.idx, 10);
-        if (fromIdx !== toIdx) {
-          this._lm.reorderLayer(this._state.activeFrameIndex, fromIdx, toIdx);
-        }
-      });
-    });
-
-    this._el.querySelectorAll('.vis-btn').forEach(btn => {
-      btn.addEventListener('click', e => {
-        e.stopPropagation();
-        this._lm.toggleVisibility(this._state.activeFrameIndex, btn.dataset.id);
-      });
-    });
-
-    this._el.querySelectorAll('.del-btn').forEach(btn => {
-      btn.addEventListener('click', e => {
-        e.stopPropagation();
-        this._lm.deleteLayer(this._state.activeFrameIndex, btn.dataset.id);
-      });
-    });
+    // No per-item event listeners — delegation handles it all
   }
 
-  /** Update active highlight without full re-render — called on layer:selected. */
+  _onClick(e) {
+    const delBtn = e.target.closest('.del-btn');
+    if (delBtn) {
+      this._lm.deleteLayer(this._state.activeFrameIndex, delBtn.dataset.id);
+      return;
+    }
+    const visBtn = e.target.closest('.vis-btn');
+    if (visBtn) {
+      this._lm.toggleVisibility(this._state.activeFrameIndex, visBtn.dataset.id);
+      return;
+    }
+    const item = e.target.closest('.layer-item');
+    if (item) {
+      this._lm.selectLayer(item.dataset.id);
+    }
+  }
+
+  _onDragStart(e) {
+    const item = e.target.closest('.layer-item');
+    if (!item) return;
+    e.dataTransfer.setData('text/plain', item.dataset.idx);
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  _onDrop(e) {
+    e.preventDefault();
+    const item = e.target.closest('.layer-item');
+    if (!item) return;
+    const fromIdx = parseInt(e.dataTransfer.getData('text/plain'), 10);
+    const toIdx   = parseInt(item.dataset.idx, 10);
+    if (fromIdx !== toIdx) {
+      this._lm.reorderLayer(this._state.activeFrameIndex, fromIdx, toIdx);
+    }
+  }
+
   _syncActive() {
     const selectedId = this._state.selectedLayerId;
     this._el.querySelectorAll('.layer-item').forEach(item => {
