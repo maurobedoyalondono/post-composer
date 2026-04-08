@@ -57,7 +57,7 @@ export function mountEditor(state) {
 
     // Post-repaint WCAG dispatch: sample canvas at selected text layer bounds
     const layerId = state.selectedLayerId;
-    const layer   = state.activeFrame?.layers?.find(l => l.id === layerId);
+    const layer   = frame?.layers?.find(l => l.id === layerId);
     if (layer?.type === 'text') {
       const bounds = computeLayerBounds(layer, canvasEl.width, canvasEl.height);
       const result = sampleBoundsLuminance(canvasEl, bounds);
@@ -146,15 +146,22 @@ export function mountEditor(state) {
 
   // ── View strip: export ─────────────────────
   root.querySelector('#btn-export-frame').addEventListener('click', () => {
-    if (!state.activeFrame) return;
-    exportFrame(canvasEl, state.activeFrame.id);
+    if (!state.activeFrame || !state.project) return;
+    // Re-render to a temp canvas at export resolution so the PNG is always clean
+    // (no analysis overlays, no selection handles, no guides)
+    const frame = state.activeFrame;
+    const tempCanvas    = document.createElement('canvas');
+    tempCanvas.width    = state.project.export.width_px;
+    tempCanvas.height   = state.project.export.height_px;
+    renderer.renderFrame(tempCanvas, frame, state.project, state.images, {});
+    exportFrame(tempCanvas, frame.id);
   });
 
   root.querySelector('#btn-export-all').addEventListener('click', async () => {
     if (!state.project) return;
     const { skipped } = await exportAllFrames(
       state.project.frames, state, renderer,
-      (i, total) => console.log(`Exporting ${i}/${total}...`)
+      () => {}
     );
     if (skipped > 0) alert(`${skipped} frame(s) skipped — missing images.`);
   });
@@ -174,8 +181,8 @@ export function mountEditor(state) {
     const rect   = canvasEl.getBoundingClientRect();
     const scaleX = canvasEl.width  / rect.width;
     const scaleY = canvasEl.height / rect.height;
-    const cx     = Math.round((e.clientX - rect.left) * scaleX);
-    const cy     = Math.round((e.clientY - rect.top)  * scaleY);
+    const cx     = Math.min(Math.round((e.clientX - rect.left) * scaleX), canvasEl.width  - 1);
+    const cy     = Math.min(Math.round((e.clientY - rect.top)  * scaleY), canvasEl.height - 1);
     const ctx    = canvasEl.getContext('2d');
     const pixel  = ctx.getImageData(cx, cy, 1, 1).data;
     const r = pixel[0], g = pixel[1], b = pixel[2];
