@@ -6,11 +6,9 @@ import { renderer }             from './renderer.js';
 import { Filmstrip }            from '../ui/filmstrip.js';
 import { Inspector }            from '../ui/inspector.js';
 import { LayersPanel }          from '../ui/layers-panel.js';
-import { renderTextToolbar }    from '../ui/toolbars/text-toolbar.js';
-import { renderShapeToolbar }   from '../ui/toolbars/shape-toolbar.js';
-import { renderImageToolbar }   from '../ui/toolbars/image-toolbar.js';
-import { renderOverlayToolbar } from '../ui/toolbars/overlay-toolbar.js';
+import { ImageTray }            from '../ui/image-tray.js';
 import { events }               from '../core/events.js';
+import { router }               from '../core/router.js';
 import { loadProjectFonts }     from '../shared/fonts.js';
 
 /**
@@ -25,16 +23,21 @@ export function mountEditor(state) {
 
   const canvasEl      = root.querySelector('#editor-canvas');
   const filmstripEl   = root.querySelector('.editor-filmstrip');
+  const imageTrayEl   = root.querySelector('.editor-image-tray');
   const inspectorEl   = root.querySelector('.editor-inspector');
-  const layersPanelEl = root.querySelector('.layers-panel');
-  const ctxToolbarEl  = root.querySelector('.context-toolbar');
+
+  // Layers panel mounts to body (floating, fixed position)
+  const layersPanelEl = document.createElement('div');
+  layersPanelEl.className = 'layers-panel';
+  document.body.appendChild(layersPanelEl);
 
   const frameManager = new FrameManager(state);
   const layerManager = new LayerManager(state);
 
   new Filmstrip(filmstripEl, frameManager, state);
   new Inspector(inspectorEl, state, layerManager);
-  new LayersPanel(layersPanelEl, state, layerManager);
+  new ImageTray(imageTrayEl, state);
+  const layersPanel = new LayersPanel(layersPanelEl, state, layerManager);
 
   function _repaint() {
     const frame = state.activeFrame;
@@ -50,7 +53,25 @@ export function mountEditor(state) {
 
   new DragResize(canvasEl, state, layerManager, _repaint);
 
-  // ── File inputs ────────────────────────────────
+  // ── Header: back to Project Manager ────────
+  root.querySelector('#btn-back').addEventListener('click', () => {
+    router.navigate('manager');
+  });
+
+  // ── Header: project name updates ───────────
+  const nameEl = root.querySelector('#header-project-name');
+  events.addEventListener('project:loaded', () => {
+    const title = state.project?.project?.title;
+    if (title) {
+      nameEl.textContent = title;
+      nameEl.classList.remove('no-project');
+    } else {
+      nameEl.textContent = 'No project loaded';
+      nameEl.classList.add('no-project');
+    }
+  });
+
+  // ── Header: file inputs ─────────────────────
   const jsonInput = root.querySelector('#input-json');
   const imgInput  = root.querySelector('#input-images');
 
@@ -79,60 +100,34 @@ export function mountEditor(state) {
     imgInput.value = '';
   });
 
-  // ── Toolbar: safe zone ─────────────────────────
+  // ── View strip: composition guides ─────────
+  _wireGuideButtons(root, state, _repaint);
+
+  // ── View strip: safe zone ──────────────────
   root.querySelector('#btn-safe-zone').addEventListener('click', e => {
     state.prefs.showSafeZone = !state.prefs.showSafeZone;
     e.currentTarget.setAttribute('aria-pressed', state.prefs.showSafeZone);
     _repaint();
   });
 
-  // ── Toolbar: layer bounds ──────────────────────
+  // ── View strip: layer bounds ───────────────
   root.querySelector('#btn-layer-bounds').addEventListener('click', e => {
     state.prefs.showLayerBounds = !state.prefs.showLayerBounds;
     e.currentTarget.setAttribute('aria-pressed', state.prefs.showLayerBounds);
     _repaint();
   });
 
-  // ── Toolbar: composition guides ────────────────
-  _wireGuideButtons(root, state, _repaint);
-
-  // ── Context toolbar ────────────────────────────
-  events.addEventListener('layer:selected', () => {
-    _updateContextToolbar(ctxToolbarEl, state, layerManager);
-  });
-  events.addEventListener('layer:deleted', () => {
-    _updateContextToolbar(ctxToolbarEl, state, layerManager);
+  // ── View strip: layers panel toggle ────────
+  const layersPanelBtn = root.querySelector('#btn-layers-panel');
+  layersPanelBtn.addEventListener('click', () => {
+    const isOpen = layersPanel.toggle();
+    layersPanelBtn.setAttribute('aria-pressed', isOpen);
+    layersPanelBtn.textContent = isOpen ? 'Layers ▼' : 'Layers ▲';
   });
 
-  // ── Repaint on events ──────────────────────────
+  // ── Repaint on events ──────────────────────
   for (const ev of ['project:loaded', 'frame:changed', 'images:loaded', 'layer:changed', 'layer:deleted', 'layers:reordered']) {
     events.addEventListener(ev, _repaint);
-  }
-}
-
-function _updateContextToolbar(container, state, layerManager) {
-  const layerId = state.selectedLayerId;
-  if (!layerId) {
-    container.classList.add('hidden');
-    container.innerHTML = '';
-    return;
-  }
-  const frame = state.activeFrame;
-  const layer = frame?.layers?.find(l => l.id === layerId);
-  if (!layer) {
-    container.classList.add('hidden');
-    container.innerHTML = '';
-    return;
-  }
-  container.innerHTML = '';
-  container.classList.remove('hidden');
-  switch (layer.type) {
-    case 'text':    renderTextToolbar(container, layer, state.activeFrameIndex, layerManager);    break;
-    case 'shape':   renderShapeToolbar(container, layer, state.activeFrameIndex, layerManager);   break;
-    case 'image':
-    case 'logo':    renderImageToolbar(container, layer, state.activeFrameIndex, layerManager);   break;
-    case 'overlay': renderOverlayToolbar(container, layer, state.activeFrameIndex, layerManager); break;
-    default:        container.classList.add('hidden');
   }
 }
 
@@ -168,52 +163,48 @@ function _buildHTML() {
   return `
     <div class="editor-shell">
 
-      <div class="editor-toolbar">
-        <div class="toolbar-group">
-          <label class="btn btn-primary" for="input-json" title="Load project JSON">
-            Load JSON
-          </label>
+      <div class="editor-header">
+        <button id="btn-back" class="btn-back">← Projects</button>
+        <span id="header-project-name" class="header-project-name no-project">No project loaded</span>
+        <div class="header-project-actions">
+          <label class="btn view-strip-btn" for="input-json" title="Load project JSON">Load JSON</label>
           <input id="input-json" type="file" accept=".json" class="file-input-hidden">
-          <label class="btn" for="input-images" title="Load image files">
-            Load Images
-          </label>
+          <label class="btn view-strip-btn" for="input-images" title="Load image files">Load Images</label>
           <input id="input-images" type="file" accept="image/*" multiple class="file-input-hidden">
-        </div>
-
-        <div class="toolbar-sep"></div>
-
-        <div class="toolbar-group">
-          <span class="toolbar-label">Guides</span>
-          <button id="btn-guide-thirds" class="btn" aria-pressed="false" title="Thirds">⅓</button>
-          <button id="btn-guide-phi"    class="btn" aria-pressed="false" title="Golden ratio (φ)">φ</button>
-          <button id="btn-guide-cross"  class="btn" aria-pressed="false" title="Cross">✛</button>
-        </div>
-
-        <div class="toolbar-sep"></div>
-
-        <div class="toolbar-group">
-          <button id="btn-safe-zone"    class="btn" aria-pressed="false" title="Safe zone">Safe Zone</button>
-          <button id="btn-layer-bounds" class="btn" aria-pressed="false" title="Layer bounds">Bounds</button>
         </div>
       </div>
 
       <div class="editor-body">
-        <div class="editor-filmstrip"></div>
 
-        <div class="editor-canvas-area" style="position:relative;">
+        <div class="editor-left-panel">
+          <div class="editor-filmstrip"></div>
+          <div class="editor-image-tray"></div>
+        </div>
+
+        <div class="editor-canvas-area">
           <canvas id="editor-canvas"></canvas>
-          <div class="layers-panel"></div>
         </div>
 
-        <div class="editor-inspector">
-          <div class="editor-empty">
-            <p>Load a project JSON<br>to get started.</p>
-          </div>
-        </div>
+        <div class="editor-inspector"></div>
 
       </div>
 
-      <div class="context-toolbar hidden"></div>
+      <div class="editor-view-strip">
+        <div class="view-strip-group">
+          <button id="btn-guide-thirds" class="btn view-strip-btn" aria-pressed="false" title="Rule of thirds">⅓ Thirds</button>
+          <button id="btn-guide-phi"    class="btn view-strip-btn" aria-pressed="false" title="Golden ratio (φ)">φ Phi</button>
+          <button id="btn-guide-cross"  class="btn view-strip-btn" aria-pressed="false" title="Cross">✛ Cross</button>
+        </div>
+        <div class="view-strip-sep"></div>
+        <div class="view-strip-group">
+          <button id="btn-safe-zone"    class="btn view-strip-btn" aria-pressed="false" title="Safe zone">Safe Zone</button>
+          <button id="btn-layer-bounds" class="btn view-strip-btn" aria-pressed="false" title="Layer bounds">Bounds</button>
+        </div>
+        <div class="view-strip-sep"></div>
+        <div class="view-strip-group view-strip-right">
+          <button id="btn-layers-panel" class="btn view-strip-btn" aria-pressed="false" title="Toggle layers panel">Layers ▲</button>
+        </div>
+      </div>
 
     </div>
   `;
