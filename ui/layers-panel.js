@@ -2,6 +2,17 @@
 import { events } from '../core/events.js';
 
 /**
+ * Escape HTML special characters to prevent XSS attacks.
+ */
+function _esc(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
  * Floating layer list panel.
  * Shows layers for the active frame in reverse render order (top layer first).
  * Supports: click-to-select, visibility toggle, delete, drag-to-reorder, drag-by-header.
@@ -69,11 +80,11 @@ export class LayersPanel {
         ${layers.map((l, visIdx) => {
           const realIdx = frame.layers.length - 1 - visIdx;
           return `<li class="layer-item${l.id === selectedId ? ' active' : ''}"
-                      data-id="${l.id}" data-idx="${realIdx}" draggable="true">
-            <button class="vis-btn${l.hidden ? ' hidden' : ''}" data-id="${l.id}" title="Toggle visibility">👁</button>
-            <span class="layer-type">${l.type}</span>
-            <span class="layer-id" title="${l.id}">${l.id}</span>
-            <button class="del-btn" data-id="${l.id}" title="Delete layer">✕</button>
+                      data-id="${_esc(l.id)}" data-idx="${realIdx}" draggable="true">
+            <button class="vis-btn${l.hidden ? ' hidden' : ''}" data-id="${_esc(l.id)}" title="Toggle visibility">👁</button>
+            <span class="layer-type">${_esc(l.type)}</span>
+            <span class="layer-id" title="${_esc(l.id)}">${_esc(l.id)}</span>
+            <button class="del-btn" data-id="${_esc(l.id)}" title="Delete layer">✕</button>
           </li>`;
         }).join('')}
       </ul>
