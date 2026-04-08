@@ -80,7 +80,8 @@ test('text layer returns max_width_pct wide', () => {
   assert(b.x === 0,   `x should be 0, got ${b.x}`);
   assert(b.y === H,   `y should be ${H}, got ${b.y}`);
   assert(b.width === 700, `width should be 700, got ${b.width}`);
-  assert(b.height > 0,   `height should be > 0, got ${b.height}`);
+  // sizePx = 5% of 1000 = 50. lineH = 50 * 1.25 = 62.5. 2 lines → 125
+  assert(b.height === 125, `height should be 125, got ${b.height}`);
 });
 
 test('text layer uses size_pct for height', () => {
@@ -112,6 +113,23 @@ test('stats_block defaults to 1 row when stats missing', () => {
   const b = computeLayerBounds({ type: 'stats_block', position: { zone: 'top-left' } }, W, H);
   // sizePx = 4% of 1000 = 40. lineH = 64. 1 row → 64
   assert(b.height === 64, `height should be 64, got ${b.height}`);
+});
+
+test('stats_block width is 40% of canvas width', () => {
+  const layer = {
+    type: 'stats_block',
+    font: { size_pct: 4 },
+    stats: [{ label: 'A', value: '1' }],
+    position: { zone: 'top-left' },
+  };
+  const b = computeLayerBounds(layer, W, H);
+  assert(b.width === W * 0.4, `width should be ${W * 0.4}, got ${b.width}`);
+});
+
+test('logo layer defaults to 10%/10% when pct missing', () => {
+  const b = computeLayerBounds({ type: 'logo', position: { zone: 'top-left' } }, W, H);
+  assert(b.width  === 100, `width should be 100, got ${b.width}`);
+  assert(b.height === 100, `height should be 100, got ${b.height}`);
 });
 
 test('absolute position is respected', () => {

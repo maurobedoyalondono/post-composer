@@ -1,6 +1,8 @@
 // editor/layers.js
 import { buildFontString } from '../shared/fonts.js';
 
+const TEXT_LINE_ESTIMATE = 2;
+
 const ZONE_ANCHORS = {
   'top-left':      (w, h) => ({ x: 0,   y: 0   }),
   'top-center':    (w, h) => ({ x: w/2, y: 0   }),
@@ -71,17 +73,21 @@ export function computeLayerBounds(layer, w, h) {
       const maxW   = (layer.max_width_pct ?? 80) / 100 * w;
       const sizePx = (layer.font?.size_pct ?? 5) / 100 * h;
       const lineH  = sizePx * (layer.font?.line_height ?? 1.25);
-      return { x, y, width: maxW, height: lineH * 2 };
+      return { x, y, width: maxW, height: lineH * TEXT_LINE_ESTIMATE };
     }
     case 'stats_block': {
       const sizePx = (layer.font?.size_pct ?? 4) / 100 * h;
       const lineH  = sizePx * 1.6;
       return { x, y, width: w * 0.4, height: lineH * (layer.stats?.length ?? 1) };
     }
-    case 'image':
-    case 'logo': {
+    case 'image': {
       const bw = (layer.width_pct  ?? 100) / 100 * w;
       const bh = (layer.height_pct ?? 100) / 100 * h;
+      return { x, y, width: bw, height: bh };
+    }
+    case 'logo': {
+      const bw = (layer.width_pct  ?? 10) / 100 * w;
+      const bh = (layer.height_pct ?? 10) / 100 * h;
       return { x, y, width: bw, height: bh };
     }
     case 'shape': {
