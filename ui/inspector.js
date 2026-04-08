@@ -1,5 +1,9 @@
 // ui/inspector.js
-import { events } from '../core/events.js';
+import { events }              from '../core/events.js';
+import { renderTextToolbar }   from './toolbars/text-toolbar.js';
+import { renderShapeToolbar }  from './toolbars/shape-toolbar.js';
+import { renderImageToolbar }  from './toolbars/image-toolbar.js';
+import { renderOverlayToolbar} from './toolbars/overlay-toolbar.js';
 
 const VALID_COMPOSITION_PATTERNS = [
   'editorial-anchor', 'minimal-strip', 'data-callout',
@@ -8,7 +12,7 @@ const VALID_COMPOSITION_PATTERNS = [
 
 /**
  * Inspector panel — frame metadata, editable composition_pattern,
- * and selected layer properties.
+ * and selected layer controls (absorbs context toolbar).
  */
 export class Inspector {
   /**
@@ -24,7 +28,18 @@ export class Inspector {
     events.addEventListener('project:loaded', () => this._render());
     events.addEventListener('frame:changed',  () => this._render());
     events.addEventListener('layer:selected', () => this._render());
+    events.addEventListener('layer:deleted',  () => this._render());
     events.addEventListener('layer:changed',  () => this._renderLayerSection());
+
+    // Plan 2c: listen for analysis:contrast to update WCAG badge
+    events.addEventListener('analysis:contrast', e => {
+      const badge = this._el.querySelector('#insp-wcag-badge');
+      if (!badge) return;
+      const { ratio, level } = e.detail;
+      badge.textContent = level;
+      badge.className = `wcag-badge wcag-${level.toLowerCase().replace(' ', '-')}`;
+      badge.style.display = '';
+    });
   }
 
   _render() {
@@ -33,8 +48,6 @@ export class Inspector {
       this._el.innerHTML = `<div class="editor-empty"><p>Load a project JSON<br>to get started.</p></div>`;
       return;
     }
-
-    const layerCount = frame.layers?.length ?? 0;
 
     this._el.innerHTML = `
       <div class="inspector-section" id="insp-frame">
@@ -65,13 +78,7 @@ export class Inspector {
         </div>
       </div>
 
-      <div class="inspector-section" id="insp-layers">
-        <div class="inspector-section-title">Layers (${layerCount})</div>
-        ${_layerSummary(frame.layers)}
-      </div>
-
       <div class="inspector-section" id="insp-layer-props">
-        ${this._layerPropsHTML()}
       </div>
     `;
 
@@ -81,78 +88,56 @@ export class Inspector {
       frame.composition_pattern = e.target.value;
       events.dispatchEvent(new CustomEvent('frame:changed', { detail: { index: this._state.activeFrameIndex } }));
     });
+
+    this._renderLayerSection();
   }
 
-  /** Re-render only the layer properties section — called on layer:changed to avoid full flicker. */
+  /** Re-render only the layer section — called on layer:changed to avoid full flicker. */
   _renderLayerSection() {
     const section = this._el.querySelector('#insp-layer-props');
-    if (section) section.innerHTML = this._layerPropsHTML();
-  }
+    if (!section) return;
 
-  _layerPropsHTML() {
     const layerId = this._state.selectedLayerId;
-    if (!layerId) return '<div class="editor-empty" style="padding:8px;font-size:11px;color:var(--color-text-muted);">Click a layer to inspect</div>';
+    if (!layerId) {
+      section.innerHTML = '<div class="editor-empty" style="padding:8px;font-size:11px;color:var(--color-text-muted);">Select a layer to edit</div>';
+      return;
+    }
 
     const frame = this._state.activeFrame;
     const layer = frame?.layers?.find(l => l.id === layerId);
-    if (!layer) return '';
+    if (!layer) { section.innerHTML = ''; return; }
 
-    const rows = [
-      ['Type',    layer.type],
-      ['ID',      layer.id],
-      ['Zone',    layer.position?.zone ?? '—'],
-      ['Hidden',  layer.hidden ? 'yes' : 'no'],
-    ];
+    const isText = layer.type === 'text';
 
-    if (layer.type === 'text') {
-      rows.push(
-        ['Content',   (layer.content ?? '').slice(0, 40)],
-        ['Size %',    layer.font?.size_pct ?? '—'],
-        ['Weight',    layer.font?.weight ?? '—'],
-        ['Color',     layer.font?.color ?? '—'],
-      );
-    } else if (layer.type === 'shape') {
-      rows.push(
-        ['Shape',     layer.shape ?? '—'],
-        ['Role',      layer.role ?? '—'],
-        ['Fill',      layer.fill ?? '—'],
-        ['Stroke',    layer.stroke ?? '—'],
-      );
-    } else if (layer.type === 'overlay') {
-      rows.push(
-        ['Opacity',   layer.opacity ?? '—'],
-        ['Gradient',  layer.gradient?.enabled ? 'yes' : 'no'],
-      );
-    } else if (layer.type === 'image' || layer.type === 'logo') {
-      rows.push(
-        ['Src',       (layer.src ?? '—').slice(0, 30)],
-        ['Opacity',   layer.opacity ?? '—'],
-      );
-    }
-
-    return `
-      <div class="inspector-section-title">Selected Layer</div>
-      ${rows.map(([label, value]) => `
-        <div class="inspector-row">
-          <span class="label">${label}</span>
-          <span class="value" title="${_esc(String(value))}">${_esc(String(value))}</span>
-        </div>
-      `).join('')}
+    section.innerHTML = `
+      <div class="inspector-section-title">
+        <span class="layer-type-badge layer-type-${_esc(layer.type)}">${_esc(layer.type)}</span>
+        <span style="color:var(--color-text-muted);font-family:var(--font-mono);font-size:9px;">${_esc(layer.id)}</span>
+      </div>
+      <div class="insp-layer-controls" id="insp-layer-controls"></div>
+      <div class="inspector-row" style="margin-top:6px;">
+        <span class="label">Zone</span>
+        <span class="value">${_esc(layer.position?.zone ?? '—')}</span>
+      </div>
+      ${isText ? `
+      <div class="inspector-row">
+        <span class="label">WCAG</span>
+        <span class="wcag-badge" id="insp-wcag-badge" style="display:none"></span>
+      </div>` : ''}
     `;
+
+    const controlsEl = section.querySelector('#insp-layer-controls');
+    const fi = this._state.activeFrameIndex;
+    switch (layer.type) {
+      case 'text':    renderTextToolbar(controlsEl, layer, fi, this._lm);    break;
+      case 'shape':   renderShapeToolbar(controlsEl, layer, fi, this._lm);   break;
+      case 'image':
+      case 'logo':    renderImageToolbar(controlsEl, layer, fi, this._lm);   break;
+      case 'overlay': renderOverlayToolbar(controlsEl, layer, fi, this._lm); break;
+    }
   }
 }
 
-function _layerSummary(layers) {
-  if (!layers?.length) return '<div style="color:var(--color-text-muted);font-size:11px;">No layers</div>';
-  return layers.map(l => `
-    <div class="inspector-row" style="font-size:11px;">
-      <span class="label" style="font-family:var(--font-mono)">${_esc(l.type)}</span>
-      <span class="value" style="color:var(--color-text-muted)">${_esc(l.id)}</span>
-    </div>
-  `).join('');
-}
-
-/** Escape HTML special characters to prevent XSS from project data. */
 function _esc(str) {
   return String(str)
     .replace(/&/g, '&amp;')
