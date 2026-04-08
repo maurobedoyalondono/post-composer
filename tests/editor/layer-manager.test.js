@@ -134,6 +134,14 @@ test('reorderLayer moves layer from one index to another', () => {
   assert(ids[1] === 'layer-a', `expected layer-a second, got ${ids[1]}`);
 });
 
+test('reorderLayer is a no-op for out-of-bounds fromIdx', () => {
+  const state = makeState();
+  const lm = new LayerManager(state);
+  lm.reorderLayer(0, 99, 0);
+  assert(state.project.frames[0].layers.length === 2, 'layer count should be unchanged');
+  assert(state.project.frames[0].layers[0].id === 'layer-a', 'order should be unchanged');
+});
+
 test('emitChanged dispatches layer:changed event', () => {
   const state = makeState();
   const lm = new LayerManager(state);

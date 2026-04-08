@@ -39,9 +39,9 @@ export class LayerManager {
    */
   deleteLayer(frameIndex, layerId) {
     const frame = this._state.project?.frames?.[frameIndex];
-    if (!frame) return;
-    const idx = frame.layers?.findIndex(l => l.id === layerId);
-    if (idx == null || idx === -1) return;
+    if (!frame?.layers) return;
+    const idx = frame.layers.findIndex(l => l.id === layerId);
+    if (idx === -1) return;
     frame.layers.splice(idx, 1);
     if (this._state.selectedLayerId === layerId) {
       this._state.setSelectedLayer(null);
@@ -69,6 +69,8 @@ export class LayerManager {
   reorderLayer(frameIndex, fromIdx, toIdx) {
     const frame = this._state.project?.frames?.[frameIndex];
     if (!frame?.layers) return;
+    if (fromIdx < 0 || fromIdx >= frame.layers.length) return;
+    if (toIdx < 0 || toIdx > frame.layers.length) return;
     const [removed] = frame.layers.splice(fromIdx, 1);
     frame.layers.splice(toIdx, 0, removed);
     events.dispatchEvent(new CustomEvent('layers:reordered', { detail: { frameIndex } }));
