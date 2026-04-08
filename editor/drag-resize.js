@@ -26,9 +26,10 @@ export class DragResize {
     this._startY    = 0;
     this._origPos   = null; // snapshot of layer.position at pointerdown
 
-    canvas.addEventListener('pointerdown', this._onDown.bind(this));
-    canvas.addEventListener('pointermove', this._onMove.bind(this));
-    canvas.addEventListener('pointerup',   this._onUp.bind(this));
+    canvas.addEventListener('pointerdown',   this._onDown.bind(this));
+    canvas.addEventListener('pointermove',   this._onMove.bind(this));
+    canvas.addEventListener('pointerup',     this._onUp.bind(this));
+    canvas.addEventListener('pointercancel', this._onUp.bind(this));
   }
 
   /** Convert a CSS-space pointer event to canvas pixel coordinates. */
