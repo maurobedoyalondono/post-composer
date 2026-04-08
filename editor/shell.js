@@ -55,10 +55,11 @@ export function mountEditor(state) {
       analysisMode:    state.analysisMode,
     });
 
-    // Post-repaint WCAG dispatch: sample canvas at selected text layer bounds
+    // Post-repaint WCAG dispatch: sample canvas at selected text layer bounds.
+    // Skip when an analysis overlay is active — overlay pixels would corrupt the reading.
     const layerId = state.selectedLayerId;
     const layer   = frame?.layers?.find(l => l.id === layerId);
-    if (layer?.type === 'text') {
+    if (!state.analysisMode && layer?.type === 'text') {
       const bounds = computeLayerBounds(layer, canvasEl.width, canvasEl.height);
       const result = sampleBoundsLuminance(canvasEl, bounds);
       events.dispatchEvent(new CustomEvent('analysis:contrast', { detail: result }));
