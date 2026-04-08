@@ -267,30 +267,40 @@
   padding: 2px;
 }
 
-/* ── Context toolbar ───────────────────────── */
-.context-toolbar {
+/* ── Layer type badge ──────────────────────── */
+.layer-type-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.layer-type-badge.layer-type-text    { background: rgba(99,102,241,0.2);  color: var(--color-accent-2); }
+.layer-type-badge.layer-type-shape   { background: rgba(16,185,129,0.2);  color: #6ee7b7; }
+.layer-type-badge.layer-type-image,
+.layer-type-badge.layer-type-logo    { background: rgba(245,158,11,0.2);  color: #fcd34d; }
+.layer-type-badge.layer-type-overlay { background: rgba(107,114,128,0.2); color: #9ca3af; }
+
+/* ── Inspector layer controls (absorbs context toolbar) ── */
+.insp-layer-controls {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  padding: 0 12px;
-  height: 36px;
-  background: var(--color-surface-2);
-  border-top: 1px solid var(--color-border);
-  flex-shrink: 0;
+  padding: 8px 0;
   font-size: 12px;
 }
 
-.context-toolbar.hidden {
-  display: none;
-}
-
-.context-toolbar label {
+.insp-layer-controls label {
   color: var(--color-text-muted);
   font-size: 11px;
 }
 
-.context-toolbar select,
-.context-toolbar input[type="number"] {
+.insp-layer-controls select,
+.insp-layer-controls input[type="number"] {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -301,7 +311,7 @@
   width: 70px;
 }
 
-.context-toolbar input[type="color"] {
+.insp-layer-controls input[type="color"] {
   width: 28px;
   height: 22px;
   border: 1px solid var(--color-border);
@@ -311,9 +321,94 @@
   padding: 1px;
 }
 
-.context-toolbar .toolbar-sep {
+.insp-layer-controls input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.insp-layer-controls .toolbar-sep {
   width: 1px;
   height: 18px;
   background: var(--color-border);
   flex-shrink: 0;
+}
+
+/* ── Image tray ────────────────────────────── */
+.image-tray-empty {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: 16px 8px;
+}
+
+.image-tray-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.image-tray-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: default;
+}
+
+.image-tray-cell img {
+  width: 76px;
+  height: 76px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  display: block;
+}
+
+.image-tray-label {
+  font-size: 9px;
+  color: var(--color-text-muted);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 76px;
+}
+
+/* ── View strip buttons ────────────────────── */
+.view-strip-btn {
+  padding: 3px 8px;
+  font-size: 11px;
+  height: 26px;
+}
+
+/* ── Layers panel — now fixed floating ─────── */
+.layers-panel {
+  position: fixed;
+  bottom: 48px;
+  left: 16px;
+  width: 220px;
+  max-height: 50vh;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  display: none;
+  flex-direction: column;
+  z-index: 100;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+.layers-panel.open {
+  display: flex;
+}
+
+.layers-panel-header {
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+  cursor: move;
+  user-select: none;
 }
