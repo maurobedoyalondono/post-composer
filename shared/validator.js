@@ -24,6 +24,7 @@ const VALID_ZONES = [
 ];
 
 const VALID_OVERLAY_STRATEGIES = ['gradient', 'solid-bar', 'duotone', 'flat', 'none'];
+const VALID_LAYER_TYPES = ['image', 'text', 'shape', 'overlay', 'stats_block', 'logo'];
 
 /**
  * Validate a parsed post-composer project JSON.
@@ -128,8 +129,7 @@ function _validateLayer(layer, label, frameLayerIds, err) {
   if (frameLayerIds.has(layer.id)) err(`${label}: duplicate layer id "${layer.id}" within frame`);
   frameLayerIds.add(layer.id);
 
-  const VALID_TYPES = ['image', 'text', 'shape', 'overlay', 'stats_block', 'logo'];
-  if (!VALID_TYPES.includes(layer.type)) err(`${label}.type "${layer.type}" is not valid`);
+  if (!VALID_LAYER_TYPES.includes(layer.type)) err(`${label}.type "${layer.type}" is not valid`);
 
   if (layer.type === 'text') {
     if (!layer.content)         err(`${label}: text layer requires content`);
