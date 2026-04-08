@@ -37,7 +37,7 @@ export class Inspector {
       if (!badge) return;
       const { ratio, level } = e.detail;
       badge.textContent = level;
-      badge.className = `wcag-badge wcag-${level.toLowerCase().replace(' ', '-')}`;
+      badge.className = `wcag-badge wcag-${level.toLowerCase().replace(/ /g, '-')}`;
       badge.style.display = '';
     });
   }
