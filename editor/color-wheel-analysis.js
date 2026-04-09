@@ -149,3 +149,109 @@ export function extractDominantColors(imageData, k = 8) {
     })
     .sort((a, b) => b.canvasPct - a.canvasPct);
 }
+
+// ─── Harmony Definitions ───────────────────────────────────────────────────
+
+// Each entry: array of { offset, halfWidth } defining sectors relative to root hue.
+const HARMONY_DEFS = {
+  complementary: [
+    { offset: 0,   halfWidth: 30 },
+    { offset: 180, halfWidth: 30 },
+  ],
+  'split-comp': [
+    { offset: 0,   halfWidth: 30 },
+    { offset: 150, halfWidth: 30 },
+    { offset: 210, halfWidth: 30 },
+  ],
+  analogous: [
+    { offset: 0, halfWidth: 45 },
+  ],
+  triad: [
+    { offset: 0,   halfWidth: 30 },
+    { offset: 120, halfWidth: 30 },
+    { offset: 240, halfWidth: 30 },
+  ],
+  double: [
+    { offset: 0,   halfWidth: 30 },
+    { offset: 60,  halfWidth: 30 },
+    { offset: 180, halfWidth: 30 },
+    { offset: 240, halfWidth: 30 },
+  ],
+  square: [
+    { offset: 0,   halfWidth: 30 },
+    { offset: 90,  halfWidth: 30 },
+    { offset: 180, halfWidth: 30 },
+    { offset: 270, halfWidth: 30 },
+  ],
+};
+
+function _inSectors(hue, sectors) {
+  return sectors.some(({ centerHue, halfWidth }) =>
+    _hueDeg(hue, centerHue) <= halfWidth
+  );
+}
+
+// Build a 360-bin histogram from chromatic dominant colors weighted by canvasPct
+function _buildHueHistogram(dominantColors) {
+  const hist = new Float32Array(360);
+  for (const c of dominantColors) {
+    if (c.isNeutral) continue;
+    hist[Math.round(c.hsl.h) % 360] += c.canvasPct;
+  }
+  return hist;
+}
+
+// Score a specific rotation: sum of histogram values inside any sector
+function _scoreRotation(hist, rootHue, sectorDefs, totalChromatic) {
+  if (totalChromatic === 0) return 0;
+  let inHarmony = 0;
+  for (let deg = 0; deg < 360; deg++) {
+    if (hist[deg] === 0) continue;
+    if (sectorDefs.some(({ offset, halfWidth }) => {
+      const center = (rootHue + offset) % 360;
+      return _hueDeg(deg, center) <= halfWidth;
+    })) {
+      inHarmony += hist[deg];
+    }
+  }
+  return Math.round((inHarmony / totalChromatic) * 100);
+}
+
+/**
+ * Compute best-fit harmony scores for all 6 harmony types.
+ * Returns results sorted by score descending.
+ * @param {Array<{hex:string,hsl:{h,s,l},canvasPct:number,isNeutral:boolean}>} dominantColors
+ * @returns {Array<{type:string,score:number,rotation:number,sectors:Array<{centerHue:number,halfWidth:number}>,inHarmony:object[],affecting:Array<{degreesOff:number}>}>}
+ */
+export function computeAllHarmonyScores(dominantColors) {
+  const chromatic = dominantColors.filter(c => !c.isNeutral);
+  const totalChromatic = chromatic.reduce((s, c) => s + c.canvasPct, 0);
+  const hist = _buildHueHistogram(dominantColors);
+
+  return Object.entries(HARMONY_DEFS)
+    .map(([type, sectorDefs]) => {
+      let bestScore = 0, bestRotation = 0;
+      for (let root = 0; root < 360; root++) {
+        const score = _scoreRotation(hist, root, sectorDefs, totalChromatic);
+        if (score > bestScore) { bestScore = score; bestRotation = root; }
+      }
+
+      const sectors = sectorDefs.map(({ offset, halfWidth }) => ({
+        centerHue: (bestRotation + offset) % 360,
+        halfWidth,
+      }));
+
+      const inHarmony = chromatic.filter(c => _inSectors(c.hsl.h, sectors));
+      const affecting = chromatic
+        .filter(c => !_inSectors(c.hsl.h, sectors))
+        .map(c => ({
+          ...c,
+          degreesOff: Math.round(Math.min(...sectors.map(s =>
+            Math.max(0, _hueDeg(c.hsl.h, s.centerHue) - s.halfWidth)
+          ))),
+        }));
+
+      return { type, score: bestScore, rotation: bestRotation, sectors, inHarmony, affecting };
+    })
+    .sort((a, b) => b.score - a.score);
+}

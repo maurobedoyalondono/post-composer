@@ -75,3 +75,73 @@ describe('extractDominantColors', () => {
     });
   });
 });
+
+import { computeAllHarmonyScores } from '../../editor/color-wheel-analysis.js';
+
+// Helper: make a minimal DominantColor
+function makeColor(h, s, l, canvasPct) {
+  const r = Math.round((l / 100) * 255); // rough approximation for hex
+  return {
+    hex: '#' + r.toString(16).padStart(2,'0').repeat(3),
+    hsl: { h, s, l },
+    canvasPct,
+    isNeutral: s < 10,
+  };
+}
+
+describe('computeAllHarmonyScores', () => {
+  it('returns exactly 6 results', () => {
+    const colors = [makeColor(0, 80, 50, 60), makeColor(180, 80, 50, 40)];
+    const results = computeAllHarmonyScores(colors);
+    assertEqual(results.length, 6, 'should return 6 harmony types');
+  });
+
+  it('sorted by score descending', () => {
+    const colors = [makeColor(0, 80, 50, 60), makeColor(180, 80, 50, 40)];
+    const results = computeAllHarmonyScores(colors);
+    for (let i = 1; i < results.length; i++) {
+      assert(results[i - 1].score >= results[i].score, 'not sorted by score');
+    }
+  });
+
+  it('perfectly complementary colors → complementary has score 100', () => {
+    // hue 0° and hue 180° are exactly complementary
+    const colors = [makeColor(0, 80, 50, 60), makeColor(180, 80, 50, 40)];
+    const results = computeAllHarmonyScores(colors);
+    const comp = results.find(r => r.type === 'complementary');
+    assert(comp.score >= 95, `complementary score should be near 100, got ${comp.score}`);
+  });
+
+  it('each result has type, score, rotation, sectors, inHarmony, affecting', () => {
+    const colors = [makeColor(0, 80, 50, 100)];
+    const results = computeAllHarmonyScores(colors);
+    const r = results[0];
+    assert(typeof r.type === 'string', 'type should be string');
+    assert(typeof r.score === 'number', 'score should be number');
+    assert(typeof r.rotation === 'number', 'rotation should be number');
+    assert(Array.isArray(r.sectors), 'sectors should be array');
+    assert(Array.isArray(r.inHarmony), 'inHarmony should be array');
+    assert(Array.isArray(r.affecting), 'affecting should be array');
+  });
+
+  it('affecting colors have degreesOff property', () => {
+    // hue 0 only — for harmonies requiring multiple hues, other slots are empty
+    // so all 100% should be in harmony for the rotation that puts 0° in a sector
+    const colors = [makeColor(0, 80, 50, 100)];
+    const results = computeAllHarmonyScores(colors);
+    results.forEach(r => {
+      r.affecting.forEach(c => {
+        assert(typeof c.degreesOff === 'number', `degreesOff should be number, got ${typeof c.degreesOff}`);
+      });
+    });
+  });
+
+  it('neutral colors excluded from inHarmony and affecting', () => {
+    const colors = [makeColor(0, 80, 50, 70), makeColor(0, 5, 90, 30)]; // one chromatic, one neutral
+    const results = computeAllHarmonyScores(colors);
+    results.forEach(r => {
+      const allColors = [...r.inHarmony, ...r.affecting];
+      assert(!allColors.some(c => c.isNeutral), 'neutral color should not appear in inHarmony or affecting');
+    });
+  });
+});
