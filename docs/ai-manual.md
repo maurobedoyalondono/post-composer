@@ -507,14 +507,28 @@ Non-negotiable series constraints. Run the full checklist (Section 8) before out
 
 **Line height:**
 - Display: `0.95` to `1.1`. Headlines stack tightly.
-- Body: `1.4` to `1.6`. Reading text needs breathing room.
+- Body: `1.2` to `1.6`. Multi-line captions need breathing room. Single-line eyebrows and labels may go as low as `1.2`.
 
 **Alignment:**
 - Left for edge-anchored designs (`editorial-anchor`, `minimal-strip`, `data-callout`).
 - Center for symmetric patterns (`centered-monument`).
+- `layered-depth` and `diagonal-tension`: follow the dominant visual weight of the composition — left when elements stack on the left, right when elements stack on the right.
 - Match the frame's compositional axis.
 
 **Text shadow:** Use only when text must cross a high-contrast, busy area where overlay is not possible. Keep `blur_px` high (10–16), `opacity` moderate (0.4–0.6). Never a hard shadow.
+
+```json
+{
+  "shadow": {
+    "enabled": true,
+    "color": "#000000",
+    "opacity": 0.5,
+    "blur_px": 12,
+    "offset_x": 1,
+    "offset_y": 1
+  }
+}
+```
 
 ---
 
@@ -539,7 +553,7 @@ Does any text in this frame need legibility help against the photograph?
       → no treatment needed — the image provides the contrast
 ```
 
-**Opacity:** Always the minimum needed. An overlay that obscures 60% of the photo when 30% would have been enough is not neutral — it changes the image.
+**Opacity:** Always the minimum needed. Cap gradient overlays at `0.65` and solid-bar overlays at `0.55`. Above these values, the overlay modifies the photograph rather than serving text. An overlay that obscures 60% of the photo when 30% would have been enough is not neutral — it changes the image.
 
 **blend_mode: "multiply":** Creates a duotone effect — the overlay color tints the image through multiplication. Use when the creative brief calls for a specific tonal cast, not as a darkening shortcut.
 
@@ -569,7 +583,7 @@ All positions use zone anchors with percentage offsets. This is the only positio
 - Left zones: positive `offset_x_pct` moves RIGHT.
 - Right zones: negative `offset_x_pct` moves LEFT (toward center).
 
-**Absolute placement** (rare — for image layers in multi_image mode, or precise geometric positioning):
+**Absolute placement** — use for: image layers in `multi_image` mode; freeform diagonal placement (`diagonal-tension`); precise geometric positioning where no zone anchor produces the correct result. Prefer zone anchors for all other cases:
 ```json
 "position": { "zone": "absolute", "x_pct": 52, "y_pct": 20 }
 ```
@@ -580,6 +594,8 @@ x_pct 0=left edge, 100=right edge. y_pct 0=top edge, 100=bottom edge.
 For a vertical text stack, compute vertical space from the bottom up:
 - Layer height ≈ `(size_pct / 100 × canvas_height) × line_height × line_count`
 - Add 1–2% of canvas height between stacked elements for breathing room
+
+`line_count` must be estimated: for display text at `size_pct: 10` with `max_width_pct: 75`, assume 1 line. For `size_pct: 10` with `max_width_pct: 50`, assume 2 lines. When uncertain, assume 2 lines and add 2% extra clearance — overlap is worse than loose spacing.
 
 Example for a bottom-left stack (caption → headline → eyebrow, reading bottom to top):
 - caption at `offset_y_pct: -6` (6% above bottom)
@@ -602,6 +618,8 @@ Layers render bottom-to-top in the array. Standard order:
 
 A shape that sits behind text must appear earlier in the array.
 
+A shape layer with semi-transparent fill may serve as a localized overlay. In this case the dedicated overlay layer may be omitted. The shape must still appear above any image layers and below all text layers.
+
 ---
 
 ## Section 8 — Pre-Output Checklist
@@ -615,12 +633,12 @@ Run before outputting any JSON. Fix every failure. Never flag and defer.
 □ At least 2 different overlay strategies across the series
 □ Accent color on ≥ 2 frames, or exclusion documented
 □ Pattern distribution: no single pattern on > 40% of frames
-□ silence_map frames have no text layers, no overlays, no shapes (layers: [])
+□ Every `full-bleed` frame has `layers: []`. If a variety contract is provided, verify all silence_map frames are full-bleed with `layers: []`.
 □ image_filename present on every frame — from image-map.md, not invented
 □ data font role used for all numeric content — no display/serif family for numbers
 □ role field present on every shape layer
 □ All positions use zone-anchor model — no bare x_pct/y_pct except zone: "absolute"
 □ multi_image frames: bg_color set if image layers don't cover the full canvas
-□ globals.google_fonts populated from design_tokens font families
+□ Every font `family` referenced in any text layer appears in `globals.google_fonts` — cross-check the array against every `font.family` value in your output
 □ max_width_pct set on every text layer
 ```
