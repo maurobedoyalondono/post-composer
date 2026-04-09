@@ -179,6 +179,39 @@ Every frame must declare one. These are not aesthetic labels — they are struct
 
 **Multi-image note:** `multi_image: true` works especially well here. Use a `bg_color` for the frame base, then position image layers at different sizes and opacities. The result is a true composite, not a single-image edit.
 
+**Example JSON fragment:**
+```json
+{
+  "id": "f05-bg-image",
+  "type": "image",
+  "src": "canyon-overview",
+  "fit": "cover",
+  "opacity": 0.5,
+  "width_pct": 60,
+  "height_pct": 80,
+  "position": { "zone": "absolute", "x_pct": 40, "y_pct": 10 }
+},
+{
+  "id": "f05-shape-frame",
+  "type": "shape",
+  "shape": "rect",
+  "role": "frame",
+  "fill": "#1a1a2e",
+  "opacity": 0.55,
+  "position": { "zone": "top-left", "offset_x_pct": 0, "offset_y_pct": 0 },
+  "width_pct": 45,
+  "height_pct": 100
+},
+{
+  "id": "f05-headline",
+  "type": "text",
+  "content": "300 Million Years",
+  "font": { "family": "Cormorant Garamond", "weight": 700, "size_pct": 10, "color": "#E0D8CE", "line_height": 1.0, "letter_spacing_em": -0.02, "align": "left" },
+  "max_width_pct": 38,
+  "position": { "zone": "middle-left", "offset_x_pct": 6, "offset_y_pct": -5 }
+}
+```
+
 ---
 
 ### `diagonal-tension`
@@ -195,6 +228,38 @@ Every frame must declare one. These are not aesthetic labels — they are struct
 **What makes it succeed:** The viewer's eye follows a diagonal path through the frame. The diagonal in the design echoes or tensions against a diagonal in the photograph.
 
 **What kills it:** Elements that are roughly diagonal but still feel like a vertical stack with slight offset.
+
+**Example JSON fragment:**
+```json
+{
+  "id": "f06-slash",
+  "type": "shape",
+  "shape": "line",
+  "role": "accent",
+  "fill": "#B85530",
+  "opacity": 0.9,
+  "position": { "zone": "absolute", "x_pct": 8, "y_pct": 72 },
+  "width_pct": 30,
+  "height_pct": 0.4,
+  "angle_deg": -25
+},
+{
+  "id": "f06-label",
+  "type": "text",
+  "content": "GOLDEN HOUR",
+  "font": { "family": "Inter", "weight": 400, "size_pct": 2.5, "color": "#E0D8CE", "line_height": 1.2, "letter_spacing_em": 0.15, "align": "left" },
+  "max_width_pct": 50,
+  "position": { "zone": "absolute", "x_pct": 12, "y_pct": 62 }
+},
+{
+  "id": "f06-caption",
+  "type": "text",
+  "content": "Canyon walls hold 9 hours of direct light each day at summer solstice.",
+  "font": { "family": "Inter", "weight": 400, "size_pct": 2.8, "color": "#5C6B74", "line_height": 1.5, "letter_spacing_em": 0, "align": "left" },
+  "max_width_pct": 45,
+  "position": { "zone": "absolute", "x_pct": 48, "y_pct": 20 }
+}
+```
 
 ---
 
@@ -213,6 +278,18 @@ Every frame must declare one. These are not aesthetic labels — they are struct
 **What makes it succeed:** The centering is exact. The element has enough negative space on all sides that it feels monumental, not just centered.
 
 **What kills it:** Centering an element but then adding off-axis secondary elements that pull the eye.
+
+**Example JSON fragment:**
+```json
+{
+  "id": "f07-headline",
+  "type": "text",
+  "content": "Light, shadow,\nand geological time.",
+  "font": { "family": "Cormorant Garamond", "weight": 700, "size_pct": 8, "color": "#E0D8CE", "line_height": 1.15, "letter_spacing_em": -0.01, "align": "center" },
+  "max_width_pct": 60,
+  "position": { "zone": "middle-center", "offset_x_pct": -30, "offset_y_pct": -4 }
+}
+```
 
 ---
 
