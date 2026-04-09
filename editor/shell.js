@@ -307,9 +307,28 @@ export function mountEditor(state) {
     if (!state.project || !state.activeFrame) return;
     const filename = e.dataTransfer.getData('text/plain');
     if (!filename || !state.images.has(filename)) return;
-    state.activeFrame.image_filename = filename;
-    const indexEntry = (state.project.image_index ?? []).find(i => i.filename === filename);
-    if (indexEntry) state.activeFrame.image_src = indexEntry.label;
+    const frame = state.activeFrame;
+    if (frame.multi_image) {
+      // Stack a new image layer at full size — user resizes from here
+      const newLayer = {
+        id:         `img-${Date.now()}`,
+        type:       'image',
+        src:        filename,
+        position:   { zone: 'absolute', x_pct: 0, y_pct: 0 },
+        width_pct:  100,
+        height_pct: 100,
+        fit:        'cover',
+        opacity:    1,
+      };
+      frame.layers = frame.layers ?? [];
+      frame.layers.push(newLayer);
+      layerManager.selectLayer(newLayer.id);
+    } else {
+      // Existing behaviour — replace background image
+      frame.image_filename = filename;
+      const indexEntry = (state.project.image_index ?? []).find(i => i.filename === filename);
+      if (indexEntry) frame.image_src = indexEntry.label;
+    }
     events.dispatchEvent(new CustomEvent('frame:changed', {
       detail: { index: state.activeFrameIndex, frame: state.activeFrame },
     }));
