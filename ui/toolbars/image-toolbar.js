@@ -1,5 +1,7 @@
 // ui/toolbars/image-toolbar.js
 
+import { createColorPicker } from '../color-picker.js';
+
 /**
  * Render image/logo layer controls into `container`.
  * @param {HTMLElement} container
@@ -14,19 +16,19 @@ export function renderImageToolbar(container, layer, frameIndex, layerManager, o
   const showSize  = !!(opts.frame?.multi_image);
   const widthPct  = layer.width_pct  ?? 100;
   const heightPct = layer.height_pct ?? 100;
+  const rotDeg    = layer.rotation_deg ?? 0;
 
-  // Canvas dimensions — needed for correct width↔height conversion.
-  // width_pct and height_pct are independent percentages of DIFFERENT axes, so
-  // maintaining pixel aspect ratio requires: height_pct = width_pct * cw / (ratio * ch)
   const cw = opts.canvasWidth  ?? 1080;
   const ch = opts.canvasHeight ?? 1350;
 
-  // Aspect ratio resolution: natural image > stored on layer > unknown
   const img          = opts.images?.get(layer.src);
   const naturalRatio = (img && img.naturalWidth > 0) ? img.naturalWidth / img.naturalHeight : null;
   const storedRatio  = layer.aspect_ratio ?? null;
-  const activeRatio  = naturalRatio ?? storedRatio;  // what we use for math
-  const ratioKnown   = naturalRatio != null;         // auto-detected from loaded image
+  const activeRatio  = naturalRatio ?? storedRatio;
+  const ratioKnown   = naturalRatio != null;
+
+  const borderEnabled = layer.border?.enabled ?? false;
+  const borderColor   = layer.border?.color   ?? '#ffffff';
 
   container.innerHTML = `
     <div class="tb-grid">
@@ -68,6 +70,37 @@ export function renderImageToolbar(container, layer, frameIndex, layerManager, o
       </div>
       ` : ''}
 
+      <div class="ctrl tb-span-4">
+        <span class="ctrl-label">Rotation</span>
+        <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
+          <button id="ctx-rot-ccw"   class="btn" title="Rotate 90° left">↺ 90°</button>
+          <button id="ctx-rot-cw"    class="btn" title="Rotate 90° right">↻ 90°</button>
+          <button id="ctx-rot-180"   class="btn" title="Rotate 180°">180°</button>
+          <button id="ctx-rot-reset" class="btn" title="Reset to 0°">⊘</button>
+          <input type="number" id="ctx-rotation" value="${rotDeg.toFixed(1)}"
+            step="1"
+            style="width:64px;background:var(--color-surface-2);border:1px solid var(--color-border);border-radius:var(--radius-sm);color:var(--color-text);font-size:12px;padding:3px 5px;"
+            title="Rotation in degrees (positive = clockwise)">
+        </div>
+      </div>
+
+      <div class="ctrl tb-span-4">
+        <span class="ctrl-label">Border</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button id="ctx-border-toggle" class="btn${borderEnabled ? ' btn-active' : ''}"
+            title="${borderEnabled ? 'Border enabled — click to disable' : 'Border disabled — click to enable'}">
+            ${borderEnabled ? '● On' : '○ Off'}
+          </button>
+          <div id="ctx-border-color-swatch"
+            style="width:20px;height:20px;border-radius:3px;border:1px solid var(--color-border);
+                   background:${borderColor};cursor:pointer;flex-shrink:0;
+                   ${borderEnabled ? '' : 'opacity:0.35;pointer-events:none;'}"
+            title="Border color">
+          </div>
+        </div>
+      </div>
+      <div id="ctx-border-color-picker" style="display:none;"></div>
+
       <div class="tb-actions">
         <button id="ctx-copy" class="btn">Copy</button>
         <button id="ctx-paste" class="btn" ${layerManager.hasClipboard() ? '' : 'disabled'}>Paste</button>
@@ -77,6 +110,7 @@ export function renderImageToolbar(container, layer, frameIndex, layerManager, o
     </div>
   `;
 
+  // ── Fit ────────────────────────────────────────────────────────────────
   container.querySelector('#ctx-fit-group').addEventListener('click', e => {
     const btn = e.target.closest('[data-fit]');
     if (!btn) return;
@@ -84,18 +118,19 @@ export function renderImageToolbar(container, layer, frameIndex, layerManager, o
     container.querySelectorAll('#ctx-fit-group .btn').forEach(b => b.classList.toggle('btn-active', b === btn));
   });
 
+  // ── Opacity ────────────────────────────────────────────────────────────
   container.querySelector('#ctx-img-opacity').addEventListener('change', e => {
     layerManager.updateLayer(frameIndex, layer.id, { opacity: parseInt(e.target.value, 10) / 100 });
   });
 
+  // ── Size controls (multi_image only) ────────────────────────────────────
   if (showSize) {
-    // Editable aspect ratio — only when natural dimensions are unavailable
     if (!ratioKnown) {
       container.querySelector('#ctx-img-ratio').addEventListener('change', e => {
         const val = parseFloat(e.target.value);
         if (!isNaN(val) && val > 0) {
           layerManager.updateLayer(frameIndex, layer.id, { aspect_ratio: val });
-          layer.aspect_ratio = val; // keep in-scope reference current for width handler
+          layer.aspect_ratio = val;
         }
       });
     }
@@ -103,30 +138,83 @@ export function renderImageToolbar(container, layer, frameIndex, layerManager, o
     container.querySelector('#ctx-img-width').addEventListener('change', e => {
       const newWidthPct = parseFloat(e.target.value);
       if (isNaN(newWidthPct) || newWidthPct < 1) return;
-
-      // Re-read ratio in case it was just set via the ratio input
       const ratio = naturalRatio ?? layer.aspect_ratio ?? null;
-
-      // Correct formula accounting for non-square canvases:
-      //   pixel_width  = newWidthPct / 100 * cw
-      //   pixel_height = pixel_width / ratio
-      //   height_pct   = pixel_height / ch * 100
-      //                = newWidthPct * cw / (ratio * ch)
       const newHeightPct = ratio != null ? newWidthPct * cw / (ratio * ch) : newWidthPct;
-
-      layerManager.updateLayer(frameIndex, layer.id, {
-        width_pct:  newWidthPct,
-        height_pct: newHeightPct,
-      });
-
-      // Attempt to update the read-only height display directly.
-      // (The layer:changed event will also trigger a full re-render, but
-      //  this keeps the field in sync if the re-render races the DOM update.)
+      layerManager.updateLayer(frameIndex, layer.id, { width_pct: newWidthPct, height_pct: newHeightPct });
       const heightInput = container.querySelector('#ctx-img-height');
       if (heightInput) heightInput.value = newHeightPct.toFixed(1);
     });
   }
 
+  // ── Rotation presets ───────────────────────────────────────────────────
+  container.querySelector('#ctx-rot-ccw').addEventListener('click', () => {
+    const cur = layer.rotation_deg ?? 0;
+    layerManager.updateLayer(frameIndex, layer.id, { rotation_deg: ((cur - 90) % 360 + 360) % 360 });
+  });
+  container.querySelector('#ctx-rot-cw').addEventListener('click', () => {
+    const cur = layer.rotation_deg ?? 0;
+    layerManager.updateLayer(frameIndex, layer.id, { rotation_deg: (cur + 90) % 360 });
+  });
+  container.querySelector('#ctx-rot-180').addEventListener('click', () => {
+    const cur = layer.rotation_deg ?? 0;
+    layerManager.updateLayer(frameIndex, layer.id, { rotation_deg: (cur + 180) % 360 });
+  });
+  container.querySelector('#ctx-rot-reset').addEventListener('click', () => {
+    layerManager.updateLayer(frameIndex, layer.id, { rotation_deg: 0 });
+  });
+
+  // ── Rotation numeric input ─────────────────────────────────────────────
+  const rotInput = container.querySelector('#ctx-rotation');
+  rotInput.addEventListener('change', e => {
+    const val = parseFloat(e.target.value);
+    if (!isNaN(val)) layerManager.updateLayer(frameIndex, layer.id, { rotation_deg: val });
+  });
+  rotInput.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    e.preventDefault();
+    const cur  = layer.rotation_deg ?? 0;
+    const step = e.shiftKey ? 10 : 1;
+    const next = e.key === 'ArrowUp' ? cur + step : cur - step;
+    layerManager.updateLayer(frameIndex, layer.id, { rotation_deg: next });
+    e.target.value = next.toFixed(1);
+  });
+
+  // ── Border toggle ──────────────────────────────────────────────────────
+  container.querySelector('#ctx-border-toggle').addEventListener('click', () => {
+    const newEnabled = !(layer.border?.enabled ?? false);
+    layerManager.updateLayer(frameIndex, layer.id, {
+      border: { ...(layer.border ?? { color: '#ffffff' }), enabled: newEnabled },
+    });
+  });
+
+  // ── Border color picker ────────────────────────────────────────────────
+  const swatch        = container.querySelector('#ctx-border-color-swatch');
+  const pickerEl      = container.querySelector('#ctx-border-color-picker');
+  let pickerOpen      = false;
+
+  swatch.addEventListener('click', () => {
+    if (!pickerOpen) {
+      const picker = createColorPicker({
+        value:     layer.border?.color ?? '#ffffff',
+        palette:   opts.palette   ?? {},
+        projectId: opts.projectId ?? 'default',
+        onChange:  (color) => {
+          layerManager.updateLayer(frameIndex, layer.id, {
+            border: { ...(layer.border ?? { enabled: false }), color },
+          });
+        },
+      });
+      pickerEl.innerHTML = '';
+      pickerEl.appendChild(picker);
+      pickerEl.style.display = 'block';
+      pickerOpen = true;
+    } else {
+      pickerEl.style.display = 'none';
+      pickerOpen = false;
+    }
+  });
+
+  // ── Copy / Paste / Delete ─────────────────────────────────────────────
   container.querySelector('#ctx-copy').addEventListener('click', () => {
     layerManager.copyLayer(frameIndex, layer.id);
     container.querySelector('#ctx-paste').disabled = false;
