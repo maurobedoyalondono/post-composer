@@ -36,6 +36,39 @@ export function computeResizedBounds(handle, origBounds, mx, my, aspectRatio, mi
   return { x: newX, y: newY, width: newW, height: newH };
 }
 
+/**
+ * Rotate a point (px, py) around center (cx, cy) by angleDeg degrees (clockwise in canvas space).
+ * @param {number} px @param {number} py
+ * @param {number} cx @param {number} cy
+ * @param {number} angleDeg
+ * @returns {{ x: number, y: number }}
+ */
+export function rotatePoint(px, py, cx, cy, angleDeg) {
+  const rad = angleDeg * Math.PI / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  const dx  = px - cx;
+  const dy  = py - cy;
+  return {
+    x: cx + dx * cos - dy * sin,
+    y: cy + dx * sin + dy * cos,
+  };
+}
+
+/**
+ * Compute the canvas position of the rotation handle circle for an image layer.
+ * The handle sits 24px above the top-center of the (possibly rotated) bounding box.
+ * @param {{ x: number, y: number, width: number, height: number }} bounds
+ * @param {number} angleDeg
+ * @returns {{ x: number, y: number }}
+ */
+export function computeRotationHandlePoint(bounds, angleDeg) {
+  const cx = bounds.x + bounds.width  / 2;
+  const cy = bounds.y + bounds.height / 2;
+  // Unrotated handle: 24px above the top-center of the bounding box
+  return rotatePoint(cx, bounds.y - 24, cx, cy, angleDeg);
+}
+
 export class DragResize {
   /**
    * @param {HTMLCanvasElement} canvas

@@ -91,3 +91,50 @@ describe('computeResizedBounds — aspect ratio + minimum size interaction', () 
     assertEqual(r.height, MIN / 4);
   });
 });
+
+import { rotatePoint, computeRotationHandlePoint } from '../../editor/drag-resize.js';
+
+describe('rotatePoint', () => {
+  it('0° rotation returns original point', () => {
+    const r = rotatePoint(100, 50, 0, 0, 0);
+    assert(Math.abs(r.x - 100) < 0.001, `x should be ~100, got ${r.x}`);
+    assert(Math.abs(r.y -  50) < 0.001, `y should be ~50, got ${r.y}`);
+  });
+
+  it('90° clockwise around origin: (1,0) → (0,1) in canvas coords', () => {
+    const r = rotatePoint(1, 0, 0, 0, 90);
+    assert(Math.abs(r.x - 0) < 0.001, `x should be ~0, got ${r.x}`);
+    assert(Math.abs(r.y - 1) < 0.001, `y should be ~1, got ${r.y}`);
+  });
+
+  it('180° around center returns opposite point', () => {
+    const r = rotatePoint(200, 100, 100, 100, 180);
+    assert(Math.abs(r.x -   0) < 0.001, `x should be ~0, got ${r.x}`);
+    assert(Math.abs(r.y - 100) < 0.001, `y should be ~100, got ${r.y}`);
+  });
+
+  it('inverse rotation returns original point', () => {
+    const p = rotatePoint(150, 80, 100, 100, 45);
+    const back = rotatePoint(p.x, p.y, 100, 100, -45);
+    assert(Math.abs(back.x - 150) < 0.001, `x should be ~150, got ${back.x}`);
+    assert(Math.abs(back.y -  80) < 0.001, `y should be ~80, got ${back.y}`);
+  });
+});
+
+describe('computeRotationHandlePoint', () => {
+  const bounds = { x: 0, y: 100, width: 200, height: 100 };
+  // center = (100, 150), unrotated handle = (100, 76) [100-24=76]
+
+  it('0° — handle is directly above top-center', () => {
+    const hp = computeRotationHandlePoint(bounds, 0);
+    assert(Math.abs(hp.x - 100) < 0.001, `x should be ~100, got ${hp.x}`);
+    assert(Math.abs(hp.y -  76) < 0.001, `y should be ~76, got ${hp.y}`);
+  });
+
+  it('90° — handle moves from above to the right of center', () => {
+    // dx=0, dy=76-150=-74; rotated 90°: x'=100+0-(-74)*1=174, y'=150+0*1+(-74)*0=150
+    const hp = computeRotationHandlePoint(bounds, 90);
+    assert(Math.abs(hp.x - 174) < 0.001, `x should be ~174, got ${hp.x}`);
+    assert(Math.abs(hp.y - 150) < 0.001, `y should be ~150, got ${hp.y}`);
+  });
+});
