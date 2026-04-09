@@ -12,13 +12,23 @@
  */
 export function showMultiImageRevertModal(imageLayers, onConfirm) {
   const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
+  overlay.style.cssText = [
+    'position:fixed', 'inset:0', 'z-index:9999',
+    'background:rgba(0,0,0,0.6)',
+    'display:flex', 'align-items:center', 'justify-content:center',
+  ].join(';');
 
   const modal = document.createElement('div');
-  modal.className = 'modal';
+  modal.style.cssText = [
+    'background:var(--color-surface)', 'border:1px solid var(--color-border)',
+    'border-radius:var(--radius-md)', 'padding:20px',
+    'min-width:320px', 'max-width:480px', 'width:90%',
+    'color:var(--color-text)', 'font-family:var(--font-sans)', 'font-size:13px',
+    'box-shadow:0 8px 32px rgba(0,0,0,0.6)',
+  ].join(';');
   modal.innerHTML = `
-    <div class="modal-header">Choose background image</div>
-    <div class="modal-body">
+    <div style="font-size:14px;font-weight:600;margin-bottom:12px;">Choose background image</div>
+    <div>
       <p style="margin:0 0 10px;font-size:12px;color:var(--color-text-muted);">
         Select which image becomes the full-frame background.<br>
         It will be resized to fill the canvas.
@@ -36,7 +46,7 @@ export function showMultiImageRevertModal(imageLayers, onConfirm) {
         Delete unused image layers
       </label>
     </div>
-    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
       <button id="modal-cancel" class="btn">Cancel</button>
       <button id="modal-confirm" class="btn btn-primary">Confirm</button>
     </div>
