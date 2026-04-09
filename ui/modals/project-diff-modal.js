@@ -30,12 +30,12 @@ export function showProjectDiffModal(diff, onApply) {
   // Build rows for each category
   const modifiedRows = modified.map(({ frameId, label, changes }) => {
     const changeList = changes.map(c => {
-      if (c.field === 'layer:added')    return `<li>Layer added: ${_esc(c.type)} (${_esc(c.layerId)})</li>`;
-      if (c.field === 'layer:removed')  return `<li>Layer removed: ${_esc(c.type)} (${_esc(c.layerId)})</li>`;
-      if (c.field === 'layer:modified') return `<li>Layer modified: ${_esc(c.type)} (${_esc(c.layerId)})</li>`;
+      if (c.field === 'layer:added')    return `<li>Incoming adds layer: ${_esc(c.type)} <span style="opacity:0.6;">(${_esc(c.layerId)})</span></li>`;
+      if (c.field === 'layer:removed')  return `<li>Incoming removes layer: ${_esc(c.type)} <span style="opacity:0.6;">(${_esc(c.layerId)})</span></li>`;
+      if (c.field === 'layer:modified') return `<li>Incoming modifies layer: ${_esc(c.type)} <span style="opacity:0.6;">(${_esc(c.layerId)})</span></li>`;
       const from = c.from != null ? String(c.from) : '—';
       const to   = c.to   != null ? String(c.to)   : '—';
-      return `<li>${_esc(c.field)}: <s>${_esc(from)}</s> → ${_esc(to)}</li>`;
+      return `<li>${_esc(c.field)}: ${_esc(from)} (current) → ${_esc(to)} (incoming)</li>`;
     }).join('');
     return `
       <div style="padding:8px 0;border-bottom:1px solid var(--color-border);">
@@ -78,7 +78,8 @@ export function showProjectDiffModal(diff, onApply) {
     : '';
 
   modal.innerHTML = `
-    <div style="font-size:14px;font-weight:600;margin-bottom:12px;">Merge incoming JSON</div>
+    <div style="font-size:14px;font-weight:600;margin-bottom:4px;">Merge incoming JSON</div>
+    ${totalChanges > 0 ? `<div style="font-size:11px;color:var(--color-text-muted);margin-bottom:12px;">Check a frame to replace your current version with the incoming one. Unchecked frames are left untouched.</div>` : ''}
     ${noDiffsMsg}
     ${totalChanges > 0 ? `<div style="font-size:11px;font-weight:600;color:var(--color-text-muted);margin-bottom:6px;">MODIFIED FRAMES</div>` : ''}
     ${modifiedRows}
