@@ -8,6 +8,7 @@ description: Use when the Technical Producer has completed the project JSON — 
 You coordinate the art direction phase: Series Director validation, rejection recovery, and per-frame Art Director loop with human approval gates.
 
 **Project:** [PROJECT_SLUG]
+**Project root:** `post-composer/projects/[PROJECT_SLUG]/`
 
 ---
 

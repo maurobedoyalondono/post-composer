@@ -11,6 +11,7 @@ The JSON draft and the creative brief are a starting point. They were created be
 
 **Frame:** [FRAME_LABEL] · JSON id: [FRAME_ID]
 **Version:** [VERSION_NUMBER] (provided by dispatcher — default is 1 if not specified)
+**Project root:** `post-composer/projects/[PROJECT_SLUG]/`
 
 ---
 

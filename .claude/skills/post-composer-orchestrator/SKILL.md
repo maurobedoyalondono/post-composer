@@ -8,6 +8,7 @@ description: Use to start a new post-composer project — dispatches the full 5-
 This skill dispatches the complete post-composer AI pipeline for a photography series. Each step has one role, declared inputs, and a formal deliverable. The orchestrator holds all approval gates — roles execute and return; the human approves before the next step begins.
 
 **Project slug:** [PROJECT_SLUG]
+**Project root:** `post-composer/projects/[PROJECT_SLUG]/`
 
 ---
 
@@ -24,10 +25,10 @@ This skill dispatches the complete post-composer AI pipeline for a photography s
 
 | File | Location | Required |
 |------|----------|---------|
-| `project-brief.txt` | `[PROJECT_SLUG]/inputs/` | Yes — photographer's intent, tone, platform |
-| `image-map.md` | `[PROJECT_SLUG]/inputs/` | Yes — authoritative frame sequence and filenames |
-| `image-sheet.jpg` | `[PROJECT_SLUG]/inputs/` | Yes — thumbnail grid for all AI image reading |
-| Raw photos | `[PROJECT_SLUG]/images/` | Playwright only — never sent to AI |
+| `project-brief.txt` | `post-composer/projects/[PROJECT_SLUG]/inputs/` | Yes — photographer's intent, tone, platform |
+| `image-map.md` | `post-composer/projects/[PROJECT_SLUG]/inputs/` | Yes — authoritative frame sequence and filenames |
+| `image-sheet.jpg` | `post-composer/projects/[PROJECT_SLUG]/inputs/` | Yes — thumbnail grid for all AI image reading |
+| Raw photos | `post-composer/projects/[PROJECT_SLUG]/images/` | Playwright only — never sent to AI |
 
 The `inputs/` folder is produced by the Project Manager app (**Export Package**). If any of the three required files is missing, stop and ask the user to export the package before continuing.
 
@@ -36,7 +37,7 @@ The `inputs/` folder is produced by the Project Manager app (**Export Package**)
 ## Directory layout
 
 ```
-[PROJECT_SLUG]/
+post-composer/projects/[PROJECT_SLUG]/
 ├── inputs/                   ← Project Manager export — AI never writes here
 │   ├── project-brief.txt
 │   ├── image-map.md
@@ -55,7 +56,7 @@ The `inputs/` folder is produced by the Project Manager app (**Export Package**)
     └── ...
 ```
 
-Create `[PROJECT_SLUG]/shared/` and `[PROJECT_SLUG]/screenshots/` if they don't exist before dispatching Step 1.
+Create `post-composer/projects/[PROJECT_SLUG]/shared/` and `post-composer/projects/[PROJECT_SLUG]/screenshots/` if they don't exist before dispatching Step 1.
 
 ---
 
@@ -71,8 +72,8 @@ Dispatch `post-composer-concept-strategist` with:
 | Placeholder | Value |
 |-------------|-------|
 | `[PROJECT_SLUG]` | `[PROJECT_SLUG]` |
-| `[INPUTS_PATH]` | `[PROJECT_SLUG]/inputs/` |
-| `[NARRATIVE_BRIEF_PATH]` | `[PROJECT_SLUG]/shared/narrative-brief.md` |
+| `[INPUTS_PATH]` | `post-composer/projects/[PROJECT_SLUG]/inputs/` |
+| `[NARRATIVE_BRIEF_PATH]` | `post-composer/projects/[PROJECT_SLUG]/shared/narrative-brief.md` |
 
 **Approval gate:** Present the narrative brief — story, narrative structure, viewer journey, and approved frame sequence. Wait for user approval. If the user requests changes, re-dispatch the Concept Strategist with the specific revision request.
 
@@ -90,9 +91,9 @@ Dispatch `post-composer-creative-director` with:
 | Placeholder | Value |
 |-------------|-------|
 | `[PROJECT_SLUG]` | `[PROJECT_SLUG]` |
-| `[NARRATIVE_BRIEF_PATH]` | `[PROJECT_SLUG]/shared/narrative-brief.md` |
-| `[INPUTS_PATH]` | `[PROJECT_SLUG]/inputs/` |
-| `[CREATIVE_BRIEF_PATH]` | `[PROJECT_SLUG]/shared/creative-brief.md` |
+| `[NARRATIVE_BRIEF_PATH]` | `post-composer/projects/[PROJECT_SLUG]/shared/narrative-brief.md` |
+| `[INPUTS_PATH]` | `post-composer/projects/[PROJECT_SLUG]/inputs/` |
+| `[CREATIVE_BRIEF_PATH]` | `post-composer/projects/[PROJECT_SLUG]/shared/creative-brief.md` |
 
 **Approval gate:** Present the full concept — design tokens, variety contract (all 7 fields), and per-frame briefs with copy. Wait for user approval. Iterate until approved. The Creative Director saves `creative-brief.md` before returning `STATUS: CONCEPT APPROVED`.
 
@@ -110,9 +111,9 @@ Dispatch `post-composer-color-advisor` with:
 | Placeholder | Value |
 |-------------|-------|
 | `[PROJECT_SLUG]` | `[PROJECT_SLUG]` |
-| `[CREATIVE_BRIEF_PATH]` | `[PROJECT_SLUG]/shared/creative-brief.md` |
-| `[INPUTS_PATH]` | `[PROJECT_SLUG]/inputs/` |
-| `[COLOR_OVERRIDES_PATH]` | `[PROJECT_SLUG]/shared/color-overrides.md` |
+| `[CREATIVE_BRIEF_PATH]` | `post-composer/projects/[PROJECT_SLUG]/shared/creative-brief.md` |
+| `[INPUTS_PATH]` | `post-composer/projects/[PROJECT_SLUG]/inputs/` |
+| `[COLOR_OVERRIDES_PATH]` | `post-composer/projects/[PROJECT_SLUG]/shared/color-overrides.md` |
 
 **Approval gate:** Present `color-overrides.md`. This gate is typically brief — review any overrides for surprises before proceeding. Wait for user confirmation before Step 4.
 
@@ -130,10 +131,10 @@ Dispatch `post-composer-technical-producer` with:
 | Placeholder | Value |
 |-------------|-------|
 | `[PROJECT_SLUG]` | `[PROJECT_SLUG]` |
-| `[CREATIVE_BRIEF_PATH]` | `[PROJECT_SLUG]/shared/creative-brief.md` |
-| `[COLOR_OVERRIDES_PATH]` | `[PROJECT_SLUG]/shared/color-overrides.md` |
-| `[INPUTS_PATH]` | `[PROJECT_SLUG]/inputs/` |
-| `[PROJECT_JSON_PATH]` | `[PROJECT_SLUG]/[PROJECT_SLUG].json` |
+| `[CREATIVE_BRIEF_PATH]` | `post-composer/projects/[PROJECT_SLUG]/shared/creative-brief.md` |
+| `[COLOR_OVERRIDES_PATH]` | `post-composer/projects/[PROJECT_SLUG]/shared/color-overrides.md` |
+| `[INPUTS_PATH]` | `post-composer/projects/[PROJECT_SLUG]/inputs/` |
+| `[PROJECT_JSON_PATH]` | `post-composer/projects/[PROJECT_SLUG]/[PROJECT_SLUG].json` |
 
 **Approval gate:** Spot-check the JSON — confirm frame count, sequence matches the approved narrative brief, variety contract fields are present in the JSON, and every frame has `image_filename` set from `image-map.md` (never invented). Wait for user approval before Step 5.
 
@@ -151,12 +152,12 @@ Dispatch `post-composer-art-orchestrator` with:
 | Placeholder | Value |
 |-------------|-------|
 | `[PROJECT_SLUG]` | `[PROJECT_SLUG]` |
-| `[PROJECT_JSON_PATH]` | `[PROJECT_SLUG]/[PROJECT_SLUG].json` |
-| `[PROJECT_JSON_URL]` | `[PROJECT_SLUG]/[PROJECT_SLUG].json` (relative from post-composer root) |
-| `[CREATIVE_BRIEF_PATH]` | `[PROJECT_SLUG]/shared/creative-brief.md` |
-| `[COLOR_OVERRIDES_PATH]` | `[PROJECT_SLUG]/shared/color-overrides.md` |
-| `[INPUTS_PATH]` | `[PROJECT_SLUG]/inputs/` |
-| `[SCREENSHOTS_PATH]` | `[PROJECT_SLUG]/screenshots/` |
+| `[PROJECT_JSON_PATH]` | `post-composer/projects/[PROJECT_SLUG]/[PROJECT_SLUG].json` |
+| `[PROJECT_JSON_URL]` | `projects/[PROJECT_SLUG]/[PROJECT_SLUG].json` |
+| `[CREATIVE_BRIEF_PATH]` | `post-composer/projects/[PROJECT_SLUG]/shared/creative-brief.md` |
+| `[COLOR_OVERRIDES_PATH]` | `post-composer/projects/[PROJECT_SLUG]/shared/color-overrides.md` |
+| `[INPUTS_PATH]` | `post-composer/projects/[PROJECT_SLUG]/inputs/` |
+| `[SCREENSHOTS_PATH]` | `post-composer/projects/[PROJECT_SLUG]/screenshots/` |
 
 The Art Orchestrator runs the Series Director first. If the Series Director rejects the JSON, it loops back to the Technical Producer for fixes before any Art Director work begins. Once approved, Art Director dispatches happen one frame at a time — each frame gets a human approval gate before the next begins.
 

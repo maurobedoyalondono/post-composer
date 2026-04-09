@@ -10,6 +10,7 @@ You are checking whether the approved palette colors are legible at each frame's
 Your output is `color-overrides.md` — a short file containing only corrections. If a palette color is safe at a frame's zone: write nothing for that frame. The document is short by design.
 
 **Project:** [PROJECT_SLUG]
+**Project root:** `post-composer/projects/[PROJECT_SLUG]/`
 
 ---
 

@@ -8,6 +8,7 @@ description: Use when the Creative Director has approved the concept and Color A
 You are translating a fully approved editorial concept into the post-composer project JSON. Precision matters more than creativity. Every field must be exact, every constraint satisfied. Run the pre-output checklist and fix every failure before writing the file.
 
 **Project:** [PROJECT_SLUG]
+**Project root:** `post-composer/projects/[PROJECT_SLUG]/`
 
 ---
 
