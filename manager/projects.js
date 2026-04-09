@@ -22,8 +22,10 @@ export class ProjectList {
    * @param {HTMLElement} container   — element to render the list into
    * @param {object}      deps        — injected dependencies
    * @param {BriefWizard} deps.wizard — the BriefWizard instance
-   * @param {Function}    deps.onOpenEditor — called with briefId when user clicks "Open in Editor"
-   * @param {Function}    deps.onExport     — called with brief when user clicks "Export Package"
+   * @param {Function}    deps.onOpenEditor         — called with briefId when user clicks "Open in Editor"
+   * @param {Function}    deps.onExport             — called with brief when user clicks "Export Package"
+   * @param {Function}    [deps.getCurrentProjectId] — returns the currently open project ID (or null)
+   * @param {Function}    [deps.onProjectDeleted]   — called with the deleted project ID
    */
   constructor(container, deps) {
     this.container = container;
