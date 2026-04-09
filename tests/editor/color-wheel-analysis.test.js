@@ -186,6 +186,69 @@ describe('computeAllHarmonyScores', () => {
   });
 });
 
+import { generateInsights } from '../../editor/color-wheel-analysis.js';
+
+describe('generateInsights', () => {
+  it('all-neutral input → single no-color insight', () => {
+    const neutral = [{ hex: '#808080', oklch: { L: 0.5, C: 0.01, h: 0 }, canvasPct: 100, isNeutral: true }];
+    const fakeResults = [];
+    const insights = generateInsights(fakeResults, neutral);
+    assertEqual(insights.length, 1, 'should return exactly 1 insight for no-chroma canvas');
+    assert(insights[0].label === 'No color detected', 'label should be No color detected');
+  });
+
+  it('returns array of insight objects with label and text', () => {
+    const colors = [
+      { hex: '#ff0000', oklch: { L: 0.6, C: 0.25, h: 29 }, canvasPct: 60, isNeutral: false },
+      { hex: '#00ff00', oklch: { L: 0.9, C: 0.29, h: 143 }, canvasPct: 40, isNeutral: false },
+    ];
+    const results = computeAllHarmonyScores(colors);
+    const insights = generateInsights(results, colors);
+    assert(Array.isArray(insights), 'insights should be array');
+    assert(insights.length >= 2, 'should return at least 2 insights');
+    insights.forEach(ins => {
+      assert(typeof ins.label === 'string', 'each insight should have label');
+      assert(typeof ins.text  === 'string', 'each insight should have text');
+    });
+  });
+
+  it('offender insight present when affecting colors exist', () => {
+    // Three colors: two complementary + one conflict
+    const colors = [
+      { hex: '#f00', oklch: { L: 0.6, C: 0.25, h: 0   }, canvasPct: 40, isNeutral: false },
+      { hex: '#0f0', oklch: { L: 0.9, C: 0.29, h: 180 }, canvasPct: 40, isNeutral: false },
+      { hex: '#ff0', oklch: { L: 0.9, C: 0.20, h: 90  }, canvasPct: 20, isNeutral: false },
+    ];
+    const results = computeAllHarmonyScores(colors);
+    const insights = generateInsights(results, colors);
+    const conflict = insights.find(i => i.label === 'Main conflict');
+    assert(conflict, 'Main conflict insight should exist');
+    assert(typeof conflict.text === 'string' && conflict.text.length > 0, 'conflict insight should have text');
+  });
+
+  it('neutral-heavy insight shown when neutralPct > 70', () => {
+    const colors = [
+      { hex: '#808080', oklch: { L: 0.5, C: 0.01, h: 0 }, canvasPct: 80, isNeutral: true },
+      { hex: '#ff0000', oklch: { L: 0.6, C: 0.25, h: 29 }, canvasPct: 20, isNeutral: false },
+    ];
+    const results = computeAllHarmonyScores(colors);
+    const insights = generateInsights(results, colors);
+    const neutralNote = insights.find(i => i.label === 'Neutral heavy');
+    assert(neutralNote, 'Neutral heavy insight should appear when neutralPct > 70');
+  });
+
+  it('suggestion insight always present', () => {
+    const colors = [
+      { hex: '#ff0000', oklch: { L: 0.6, C: 0.25, h: 29 }, canvasPct: 100, isNeutral: false },
+    ];
+    const results = computeAllHarmonyScores(colors);
+    const insights = generateInsights(results, colors);
+    const suggestion = insights.find(i => i.label === 'Suggestion');
+    assert(suggestion, 'Suggestion insight should always be present');
+    assert(suggestion.text.length > 0, 'Suggestion should have non-empty text');
+  });
+});
+
 import { computeAffectingOverlay } from '../../editor/color-wheel-analysis.js';
 
 describe('computeAffectingOverlay', () => {
