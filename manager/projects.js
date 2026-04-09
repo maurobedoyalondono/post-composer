@@ -1,5 +1,6 @@
 // manager/projects.js
 import { storage } from '../core/storage.js';
+import { showDeleteConfirmModal } from '../ui/modals/delete-confirm-modal.js';
 import { PLATFORMS, TONES } from './constants.js';
 
 function escHtml(str) {
@@ -79,6 +80,16 @@ export class ProjectList {
         </div>`;
 
       fragment.appendChild(card);
+
+      // Show corrupt state if project data is missing or unreadable
+      let projectOk = false;
+      try { projectOk = !!storage.getProject(brief.id); } catch { /* corrupt */ }
+      if (!projectOk) {
+        const warn = document.createElement('div');
+        warn.style.cssText = 'font-size:11px;color:#f87171;padding:4px 0 0;';
+        warn.textContent = '⚠ Project data missing or corrupt';
+        card.querySelector('.project-card-details').appendChild(warn);
+      }
     }
 
     this.container.appendChild(fragment);
@@ -106,12 +117,26 @@ export class ProjectList {
         }
 
       } else if (btn.classList.contains('btn-delete')) {
-        const briefForDelete = storage.getBrief(id);
-        const title = briefForDelete ? briefForDelete.title : id;
-        if (confirm(`Delete project "${title}"? This cannot be undone.`)) {
-          storage.deleteBrief(id);
-          this.refresh();
-        }
+        const brief = storage.getBrief(id);
+        if (!brief) return;
+
+        let projectData = null;
+        try { projectData = storage.getProject(id); } catch { /* corrupt, still allow delete */ }
+        const frameCount = projectData?.frames?.length ?? 0;
+        const imageCount = brief.imageCount ?? 0;
+
+        showDeleteConfirmModal(
+          { title: brief.title, frameCount, imageCount, updatedAt: brief.updatedAt },
+          () => {
+            // If this project is currently open in editor, clear state
+            if (this.deps.getCurrentProjectId?.() === id) {
+              this.deps.onProjectDeleted?.(id);
+            }
+            storage.deleteProject(id);
+            storage.deleteBrief(id); // also calls storage.deleteImages(id)
+            this.refresh();
+          }
+        );
       }
     };
 

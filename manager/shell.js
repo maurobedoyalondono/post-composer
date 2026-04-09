@@ -44,6 +44,12 @@ export function mountManager(state) {
         alert(`Export failed: ${err.message}`);
       }
     },
+    getCurrentProjectId: () => state.activeBriefId,
+    onProjectDeleted: (deletedId) => {
+      state.activeBriefId = null;
+      state.setProject(null);
+      storage.savePrefs({ ...storage.getPrefs(), lastBriefId: null });
+    },
   });
 
   root.querySelector('#btn-new-project').addEventListener('click', () => wizard.open());
