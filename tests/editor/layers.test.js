@@ -1,6 +1,5 @@
 import { describe, it, assertEqual } from '../test-helper.js';
-import { resolvePosition, computeTextBounds } from '../../editor/layers.js';
-import { computeImageInsetRect } from '../../editor/layers.js';
+import { resolvePosition, computeTextBounds, computeImageInsetRect } from '../../editor/layers.js';
 
 describe('resolvePosition', () => {
   it('top-left with no offset → {x:0, y:0}', () => {
