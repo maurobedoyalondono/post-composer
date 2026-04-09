@@ -37,12 +37,18 @@ export function showMultiImageRevertModal(imageLayers, onConfirm) {
       </label>
     </div>
     <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+      <button id="modal-cancel" class="btn">Cancel</button>
       <button id="modal-confirm" class="btn btn-primary">Confirm</button>
     </div>
   `;
 
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
+
+  const dismiss = () => overlay.remove();
+
+  modal.querySelector('#modal-cancel').addEventListener('click', dismiss);
+  overlay.addEventListener('click', e => { if (e.target === overlay) dismiss(); });
 
   modal.querySelector('#modal-confirm').addEventListener('click', () => {
     const selectedId   = modal.querySelector('input[name="modal-bg-img"]:checked')?.value;
