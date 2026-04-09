@@ -6,10 +6,13 @@
  * @param {object} layer
  * @param {number} frameIndex
  * @param {import('../../editor/layer-manager.js').LayerManager} layerManager
- * @param {{ palette: object, projectId: string }} opts
+ * @param {{ palette: object, projectId: string, frame: object, images: Map }} opts
  */
 export function renderImageToolbar(container, layer, frameIndex, layerManager, opts = {}) {
-  const fit = layer.fit ?? 'fill';
+  const fit      = layer.fit ?? 'fill';
+  const showSize = !!(opts.frame?.multi_image);
+  const widthPct = layer.width_pct  ?? 100;
+  const heightPct = layer.height_pct ?? 100;
 
   container.innerHTML = `
     <div class="tb-grid">
@@ -27,6 +30,17 @@ export function renderImageToolbar(container, layer, frameIndex, layerManager, o
         <span class="ctrl-label">Opacity %</span>
         <input type="number" id="ctx-img-opacity" value="${Math.round((layer.opacity ?? 1) * 100)}" min="0" max="100" step="5">
       </div>
+
+      ${showSize ? `
+      <div class="ctrl">
+        <span class="ctrl-label">Width %</span>
+        <input type="number" id="ctx-img-width" value="${widthPct.toFixed(1)}" min="1" max="200" step="1">
+      </div>
+      <div class="ctrl">
+        <span class="ctrl-label">Height %</span>
+        <input type="number" id="ctx-img-height" value="${heightPct.toFixed(1)}" min="1" max="200" step="1" readonly style="opacity:0.6;cursor:default;" title="Locked to aspect ratio — edit Width to resize">
+      </div>
+      ` : ''}
 
       <div class="tb-actions">
         <button id="ctx-copy" class="btn">Copy</button>
@@ -47,6 +61,30 @@ export function renderImageToolbar(container, layer, frameIndex, layerManager, o
   container.querySelector('#ctx-img-opacity').addEventListener('change', e => {
     layerManager.updateLayer(frameIndex, layer.id, { opacity: parseInt(e.target.value, 10) / 100 });
   });
+
+  if (showSize) {
+    container.querySelector('#ctx-img-width').addEventListener('change', e => {
+      const newWidthPct = parseFloat(e.target.value);
+      if (isNaN(newWidthPct) || newWidthPct < 1) return;
+
+      // Compute locked height using natural image aspect ratio
+      const img = opts.images?.get(layer.src);
+      let newHeightPct = newWidthPct;
+      if (img && img.naturalWidth > 0) {
+        const ratio = img.naturalWidth / img.naturalHeight;
+        newHeightPct = newWidthPct / ratio;
+      }
+
+      layerManager.updateLayer(frameIndex, layer.id, {
+        width_pct:  newWidthPct,
+        height_pct: newHeightPct,
+      });
+
+      // Update the read-only height display
+      const heightInput = container.querySelector('#ctx-img-height');
+      if (heightInput) heightInput.value = newHeightPct.toFixed(1);
+    });
+  }
 
   container.querySelector('#ctx-copy').addEventListener('click', () => {
     layerManager.copyLayer(frameIndex, layer.id);

@@ -135,6 +135,8 @@ export class Inspector {
     const opts = {
       palette:   this._state.project?.design_tokens?.palette ?? {},
       projectId: this._state.project?.project?.id ?? 'default',
+      frame:     this._state.activeFrame,
+      images:    this._state.images,
     };
     switch (layer.type) {
       case 'text':    renderTextToolbar(controlsEl, layer, fi, this._lm, opts);    break;
