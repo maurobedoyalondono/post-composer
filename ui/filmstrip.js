@@ -51,6 +51,7 @@ export class Filmstrip {
       const canvas    = document.createElement('canvas');
       canvas.width    = THUMB_W;
       canvas.height   = thumbH;
+      canvas.style.aspectRatio = `${THUMB_W} / ${thumbH}`;
 
       const num       = document.createElement('span');
       num.className   = 'frame-num';
