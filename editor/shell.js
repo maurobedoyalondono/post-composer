@@ -127,7 +127,12 @@ export function mountEditor(state, projectStore) {
       try {
         savedProject = storage.getProject(state.activeBriefId);
       } catch (e) {
-        savedProject = null;
+        console.warn('[shell] Stored project corrupt (parse error):', e);
+        storage.deleteProject(state.activeBriefId);
+        storage.savePrefs({ ...storage.getPrefs(), lastBriefId: null });
+        _showToast('Project could not be restored — data was invalid.');
+        router.navigate('manager');
+        return;
       }
 
       if (savedProject) {
