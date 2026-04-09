@@ -322,6 +322,125 @@ Multi-image mode (`frame.multi_image: true`):
 }
 ```
 
+### Multi-Image Compositing
+
+**When to use `multi_image: true`:**
+- The frame requires two images to complete its editorial meaning — a close-up and a wide shot together, a before/after, a diptych where both images are the statement
+- The composition calls for an image inset or panel layout that a single cropped image cannot produce
+- A `layered-depth` frame where the depth comes from image transparency and overlap, not just from stacking text/shapes over a photo
+- Do NOT use multi_image just to add a second image for visual interest. Both images must serve the editorial idea documented in the creative brief.
+
+**`bg_color` selection:**
+- Match or deepen a dominant dark tone from the images (e.g., if the photos have deep shadow zones, pull that shadow color as bg_color)
+- For neutral/documentary frames: `#000000` or a near-black from the palette
+- For tonal frames: use `design_tokens.palette.background` (resolved automatically if `bg_color` is absent)
+- Never use a bright or high-saturation bg_color — it reads as a mistake when visible through any gap
+- Only matters if image layers don't cover the full canvas — if they do, bg_color has no visible effect
+
+**Three compositing strategies (with JSON examples):**
+
+1. **Split panel** — Two images side-by-side or stacked, each covering half the canvas. Deliberately shows both images at full weight. Use for diptychs, before/after, location/portrait pairings.
+
+```json
+{
+  "multi_image": true,
+  "bg_color": "#1a1a1a",
+  "layers": [
+    {
+      "id": "img-left",
+      "type": "image",
+      "src": "canyon-overview",
+      "fit": "cover",
+      "opacity": 1,
+      "width_pct": 49,
+      "height_pct": 100,
+      "position": { "zone": "absolute", "x_pct": 0, "y_pct": 0 }
+    },
+    {
+      "id": "img-right",
+      "type": "image",
+      "src": "canyon-closeup",
+      "fit": "cover",
+      "opacity": 1,
+      "width_pct": 49,
+      "height_pct": 100,
+      "position": { "zone": "absolute", "x_pct": 51, "y_pct": 0 }
+    }
+  ]
+}
+```
+
+2. **Foreground inset** — One full-canvas image as background, one smaller image as a positioned inset. Use when context (wide shot) and detail (close-up) must both be visible. The inset image is typically 30–55% wide, positioned in a corner or zone where it doesn't cover the primary subject of the background image.
+
+```json
+{
+  "multi_image": true,
+  "bg_color": "#0d0d0d",
+  "layers": [
+    {
+      "id": "img-bg",
+      "type": "image",
+      "src": "canyon-landscape",
+      "fit": "cover",
+      "opacity": 1,
+      "width_pct": 100,
+      "height_pct": 100,
+      "position": { "zone": "absolute", "x_pct": 0, "y_pct": 0 }
+    },
+    {
+      "id": "img-inset",
+      "type": "image",
+      "src": "rock-texture",
+      "fit": "cover",
+      "opacity": 0.92,
+      "width_pct": 38,
+      "height_pct": 45,
+      "position": { "zone": "absolute", "x_pct": 58, "y_pct": 42 }
+    }
+  ]
+}
+```
+
+3. **Transparency composite** — Two or more images at reduced opacity, overlapping. The combination creates a composite impression neither image holds alone. Use for `layered-depth` frames where multiple image planes create depth. At least one image layer should be below 0.7 opacity.
+
+```json
+{
+  "multi_image": true,
+  "bg_color": "#1a1a2e",
+  "layers": [
+    {
+      "id": "img-base",
+      "type": "image",
+      "src": "canyon-wide",
+      "fit": "cover",
+      "opacity": 0.45,
+      "width_pct": 100,
+      "height_pct": 100,
+      "position": { "zone": "absolute", "x_pct": 0, "y_pct": 0 }
+    },
+    {
+      "id": "img-overlay",
+      "type": "image",
+      "src": "canyon-shadow-detail",
+      "fit": "cover",
+      "opacity": 0.7,
+      "width_pct": 60,
+      "height_pct": 80,
+      "position": { "zone": "absolute", "x_pct": 40, "y_pct": 10 }
+    }
+  ]
+}
+```
+
+**Pattern compatibility:**
+- `layered-depth`: Best fit. Multi-image directly enables the depth that this pattern requires.
+- `full-bleed`: Valid for diptych silence (split panel with `layers: []` for text/shape — images only).
+- `editorial-anchor`, `data-callout`, `diagonal-tension`: Valid. Use foreground inset strategy. Text and shape layers come after image layers in the array.
+- `minimal-strip`, `centered-monument`: Possible but unusual. Only use if the editorial idea genuinely requires two images. Text-only frames rarely benefit from multi_image complexity.
+
+**Layer ordering with multi_image:**
+Image layers always come first in the array (they are the background). Overlay, shapes, and text follow the standard order from Section 7.
+
 ### overlay layer
 
 Two strategies — given equal weight. Choose based on what is at the text zone:
