@@ -261,8 +261,8 @@ describe('computeAffectingOverlay', () => {
     assertEqual(out.length, data.length, 'output length should match input');
   });
 
-  it('pixel in harmony zone → copied unchanged', () => {
-    // Pure red (hue ≈ 0°) with sector centerHue=0, halfWidth=30
+  it('pixel in harmony zone → copied unchanged (pure red, sector at 0°±30°)', () => {
+    // Pure red: OKLCH h ≈ 29° — inside sector [0°±30°]
     const data = new Uint8ClampedArray([255, 0, 0, 255]);
     const imageData = new ImageData(data, 1, 1);
     const sectors = [{ centerHue: 0, halfWidth: 30 }];
@@ -274,7 +274,7 @@ describe('computeAffectingOverlay', () => {
   });
 
   it('pixel outside harmony zone → red tint rgba(239,68,68,128)', () => {
-    // Pure green (hue ≈ 120°) with sector only at hue 0°
+    // Pure green: OKLCH h ≈ 142° — outside sector [0°±30°]
     const data = new Uint8ClampedArray([0, 255, 0, 255]);
     const imageData = new ImageData(data, 1, 1);
     const sectors = [{ centerHue: 0, halfWidth: 30 }];
@@ -285,15 +285,26 @@ describe('computeAffectingOverlay', () => {
     assertEqual(out[3], 128, 'A should be 128 (50% opacity)');
   });
 
-  it('neutral pixel (s<10) → copied unchanged regardless of sectors', () => {
-    // Pure white (s=0) with no harmonic sector
+  it('neutral pixel (OKLCH C < 0.04) → copied unchanged regardless of sectors', () => {
+    // Pure white: OKLCH C ≈ 0 → neutral — passes through even with unmatched sector
     const data = new Uint8ClampedArray([255, 255, 255, 255]);
     const imageData = new ImageData(data, 1, 1);
-    const sectors = [{ centerHue: 120, halfWidth: 30 }];
+    const sectors = [{ centerHue: 120, halfWidth: 15 }];
     const out = computeAffectingOverlay(imageData, sectors);
     assertEqual(out[0], 255, 'neutral pixel R unchanged');
     assertEqual(out[1], 255, 'neutral pixel G unchanged');
     assertEqual(out[2], 255, 'neutral pixel B unchanged');
     assertEqual(out[3], 255, 'neutral pixel A unchanged');
+  });
+
+  it('mid-gray pixel (near-neutral) → copied unchanged', () => {
+    // rgb(128,128,128): OKLCH C ≈ 0 → treated as neutral
+    const data = new Uint8ClampedArray([128, 128, 128, 255]);
+    const imageData = new ImageData(data, 1, 1);
+    const sectors = [{ centerHue: 200, halfWidth: 15 }];
+    const out = computeAffectingOverlay(imageData, sectors);
+    assertEqual(out[0], 128, 'gray pixel R unchanged');
+    assertEqual(out[1], 128, 'gray pixel G unchanged');
+    assertEqual(out[2], 128, 'gray pixel B unchanged');
   });
 });
