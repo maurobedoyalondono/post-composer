@@ -12,6 +12,7 @@ export class AppState {
     this.analysisMode     = null;       // null | 'heatmap' | 'zones' | 'contrast' | 'weight'
     this.prefs            = { guideType: null, showSafeZone: false, showLayerBounds: false };
     this.activeBriefId    = null;       // brief id to open when navigating to editor
+    this.loadedBriefId    = null;       // brief id whose project is currently in state
   }
 
   /** @param {'manager'|'editor'} view */
@@ -25,7 +26,10 @@ export class AppState {
     this.project          = project;
     this.activeFrameIndex = 0;
     this.selectedLayerId  = null;
-    if (project === null) this.images.clear();
+    if (project === null) {
+      this.images.clear();
+      this.loadedBriefId = null;
+    }
   }
 
   /** @param {string|null} mode */

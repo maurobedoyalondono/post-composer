@@ -61,4 +61,23 @@ describe('AppState', () => {
     const s = new AppState();
     assert(s.activeFrame === null);
   });
+
+  it('initialises loadedBriefId as null', () => {
+    const s = new AppState();
+    assert(s.loadedBriefId === null);
+  });
+
+  it('setProject(null) resets loadedBriefId to null', () => {
+    const s = new AppState();
+    s.loadedBriefId = 'brief-1';
+    s.setProject(null);
+    assert(s.loadedBriefId === null);
+  });
+
+  it('setProject(non-null) does not change loadedBriefId', () => {
+    const s = new AppState();
+    s.loadedBriefId = 'brief-1';
+    s.setProject({ id: 'p', frames: [] });
+    assertEqual(s.loadedBriefId, 'brief-1');
+  });
 });
