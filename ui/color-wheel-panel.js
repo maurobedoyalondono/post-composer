@@ -251,7 +251,8 @@ export class ColorWheelPanel {
       this._activeIdx = parseInt(harmonyRow.dataset.idx, 10);
       this._render();
       if (this._overlayOn) {
-        const canvas    = document.getElementById('editor-canvas');
+        const canvas = document.getElementById('editor-canvas');
+        if (!canvas) return;
         const ctx       = canvas.getContext('2d');
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         this._applyOverlay(imageData);
