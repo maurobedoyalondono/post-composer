@@ -124,7 +124,7 @@ export function mountEditor(state, projectStore) {
 
     // ── Unload previous project when switching to a different brief ──
     if (state.project && state.loadedBriefId !== state.activeBriefId) {
-      await projectStore.flush();
+      await projectStore.flush(); // flush() is sync; await is defensive for future async promotion
       state.setProject(null);
       nameEl.textContent = 'Loading\u2026';
       nameEl.classList.add('no-project');
@@ -164,8 +164,8 @@ export function mountEditor(state, projectStore) {
       }
     }
 
-    // Record which brief is now loaded (skip if we bailed early due to corrupt project)
-    state.loadedBriefId = state.activeBriefId;
+    // Record which brief is now loaded (only when a project is actually resident in state)
+    if (state.project) state.loadedBriefId = state.activeBriefId;
 
     // ── Load images not already in state ──
     const sources = [
