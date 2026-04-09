@@ -78,6 +78,9 @@ export class Inspector {
         </div>
       </div>
 
+      <div class="inspector-section" id="insp-canvas">
+      </div>
+
       <div class="inspector-section" id="insp-layer-props">
       </div>
     `;
@@ -90,6 +93,7 @@ export class Inspector {
     });
 
     this._renderLayerSection();
+    this._renderCanvasSection(frame);
   }
 
   /** Re-render only the layer section — called on layer:changed to avoid full flicker. */
@@ -139,6 +143,82 @@ export class Inspector {
       case 'logo':    renderImageToolbar(controlsEl, layer, fi, this._lm, opts);   break;
       case 'overlay': renderOverlayToolbar(controlsEl, layer, fi, this._lm, opts); break;
     }
+  }
+
+  /** Render the Canvas section: bg_color override + multi_image toggle. */
+  _renderCanvasSection(frame) {
+    const section = this._el.querySelector('#insp-canvas');
+    if (!section) return;
+
+    const projectBg = this._state.project?.design_tokens?.palette?.background ?? '#000000';
+    const frameBg   = frame.bg_color ?? '';
+
+    section.innerHTML = `
+      <div class="inspector-section-title">Canvas</div>
+      <div class="inspector-row">
+        <span class="label">Background</span>
+        <div style="display:flex;gap:4px;align-items:center;">
+          <input type="color" id="insp-bg-color"
+            value="${_esc(frameBg || projectBg)}"
+            title="Frame background color (overrides project default)">
+          <input type="text" id="insp-bg-hex"
+            value="${_esc(frameBg)}"
+            placeholder="${_esc(projectBg)}"
+            maxlength="7"
+            style="width:64px;background:var(--color-surface-2);border:1px solid var(--color-border);border-radius:var(--radius-sm);color:var(--color-text);font-size:12px;padding:3px 5px;"
+            title="Hex override — clear to use project default">
+        </div>
+      </div>
+      <div class="inspector-row">
+        <span class="label">Multi-image</span>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="insp-multi-image" ${frame.multi_image ? 'checked' : ''}>
+          <span style="font-size:11px;color:var(--color-text-muted);">Stack image layers</span>
+        </label>
+      </div>
+    `;
+
+    // bg_color: color picker
+    section.querySelector('#insp-bg-color').addEventListener('input', e => {
+      const hex = e.target.value;
+      frame.bg_color = hex;
+      section.querySelector('#insp-bg-hex').value = hex;
+      events.dispatchEvent(new CustomEvent('frame:changed', { detail: { index: this._state.activeFrameIndex } }));
+    });
+
+    // bg_color: hex text field — clear = remove override
+    section.querySelector('#insp-bg-hex').addEventListener('change', e => {
+      const val = e.target.value.trim();
+      if (!val) {
+        delete frame.bg_color;
+        section.querySelector('#insp-bg-color').value = projectBg;
+      } else if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+        frame.bg_color = val;
+        section.querySelector('#insp-bg-color').value = val;
+      }
+      events.dispatchEvent(new CustomEvent('frame:changed', { detail: { index: this._state.activeFrameIndex } }));
+    });
+
+    // multi_image toggle
+    section.querySelector('#insp-multi-image').addEventListener('change', e => {
+      if (e.target.checked) {
+        frame.multi_image = true;
+        events.dispatchEvent(new CustomEvent('frame:changed', { detail: { index: this._state.activeFrameIndex } }));
+      } else {
+        // Toggle off — always show modal (see Task 7)
+        e.target.checked = true; // revert checkbox until modal confirms
+        this._onMultiImageToggleOff(frame);
+      }
+    });
+  }
+
+  /** Called when user toggles multi_image off. Wired in Task 7. */
+  _onMultiImageToggleOff(frame) {
+    // Stub — implemented in Task 7
+    frame.multi_image = false;
+    const checkbox = this._el.querySelector('#insp-multi-image');
+    if (checkbox) checkbox.checked = false;
+    events.dispatchEvent(new CustomEvent('frame:changed', { detail: { index: this._state.activeFrameIndex } }));
   }
 }
 
