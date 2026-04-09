@@ -123,10 +123,10 @@ function _kmeansHSL(samples, k) {
 export function extractDominantColors(imageData, k = 8) {
   const { data } = imageData;
   const totalPixels = data.length / 4;
-  const stride = 4;
+  const sampleStep = 4;
 
   const samples = [];
-  for (let i = 0; i < totalPixels; i += stride) {
+  for (let i = 0; i < totalPixels; i += sampleStep) {
     samples.push(_rgbToHsl(data[i * 4], data[i * 4 + 1], data[i * 4 + 2]));
   }
   if (samples.length === 0) return [];
@@ -136,7 +136,9 @@ export function extractDominantColors(imageData, k = 8) {
   for (let i = 0; i < assignments.length; i++) counts[assignments[i]]++;
 
   return centroids
-    .map((hsl, j) => {
+    .map((hsl, j) => ({ hsl, j, count: counts[j] }))
+    .filter(({ count }) => count > 0)
+    .map(({ hsl, j }) => {
       const rgb = _hslToRgb(hsl.h, hsl.s, hsl.l);
       return {
         hex:       _rgbToHex(rgb.r, rgb.g, rgb.b),

@@ -66,4 +66,12 @@ describe('extractDominantColors', () => {
     assert(typeof c.canvasPct === 'number', 'canvasPct should be number');
     assert(typeof c.isNeutral === 'boolean', 'isNeutral should be boolean');
   });
+
+  it('all results have canvasPct > 0 (no empty clusters)', () => {
+    const img = solidImage(255, 0, 0, 16);
+    const result = extractDominantColors(img, 8); // k=8 but only 1 real cluster
+    result.forEach(c => {
+      assert(c.canvasPct > 0, `expected canvasPct > 0, got ${c.canvasPct}`);
+    });
+  });
 });
