@@ -10,6 +10,7 @@ import { exportFrame, exportAllFrames } from './export.js';
 import { Filmstrip }            from '../ui/filmstrip.js';
 import { Inspector }            from '../ui/inspector.js';
 import { LayersPanel }          from '../ui/layers-panel.js';
+import { ColorWheelPanel }      from '../ui/color-wheel-panel.js';
 import { ImageTray }            from '../ui/image-tray.js';
 import { events }               from '../core/events.js';
 import { router }               from '../core/router.js';
@@ -45,16 +46,30 @@ export function mountEditor(state, projectStore) {
   new ImageTray(imageTrayEl, state);
   const layersPanel = new LayersPanel(layersPanelEl, state, layerManager);
 
+  // Color wheel panel — floating, appended to body
+  const colorWheelPanelEl = document.createElement('div');
+  colorWheelPanelEl.className = 'color-wheel-panel';
+  colorWheelPanelEl.style.cssText = [
+    'position:fixed', 'top:80px', 'right:20px',
+    'width:280px', 'z-index:200',
+    'background:var(--color-surface)', 'border:1px solid var(--color-border)',
+    'border-radius:var(--radius-md)', 'box-shadow:0 4px 24px rgba(0,0,0,0.5)',
+    'display:none',
+  ].join(';');
+  document.body.appendChild(colorWheelPanelEl);
+  const colorWheelPanel = new ColorWheelPanel(colorWheelPanelEl, state);
+
   function _repaint() {
     const frame = state.activeFrame;
     if (!frame || !state.project) return;
     _fitCanvas(canvasEl, root.querySelector('.editor-canvas-area'), state.project.export);
     renderer.renderFrame(canvasEl, frame, state.project, state.images, {
-      guideType:       state.prefs.guideType,
-      showSafeZone:    state.prefs.showSafeZone,
-      selectedLayerId: state.selectedLayerId,
-      showLayerBounds: state.prefs.showLayerBounds,
-      analysisMode:    state.analysisMode,
+      guideType:          state.prefs.guideType,
+      showSafeZone:       state.prefs.showSafeZone,
+      selectedLayerId:    state.selectedLayerId,
+      showLayerBounds:    state.prefs.showLayerBounds,
+      analysisMode:       state.analysisMode,
+      colorWheelOverlay:  state.colorWheelOverlay,
     });
 
     // Post-repaint WCAG dispatch: sample canvas at selected text layer bounds.
@@ -365,6 +380,16 @@ export function mountEditor(state, projectStore) {
     layersPanelBtn.textContent = isOpen ? 'Layers ▼' : 'Layers ▲';
   });
 
+  // ── View strip: color wheel panel toggle ────────
+  const colorWheelBtn = root.querySelector('#btn-color-wheel');
+  colorWheelBtn.addEventListener('click', () => {
+    const isOpen = colorWheelPanel.toggle();
+    colorWheelPanelEl.style.display = isOpen ? 'block' : 'none';
+    colorWheelBtn.setAttribute('aria-pressed', isOpen);
+  });
+
+  events.addEventListener('color-wheel:overlay-changed', _repaint);
+
   // ── Canvas: click-to-probe (disabled by default, toggled via view strip) ─
   let probePopover = null;
   let probeActive  = false;
@@ -575,9 +600,10 @@ function _buildHTML() {
         </div>
         <div class="view-strip-sep"></div>
         <div class="view-strip-group">
-          <button id="btn-contrast" class="btn view-strip-btn" aria-pressed="false" title="Contrast map">Contrast</button>
-          <button id="btn-weight"   class="btn view-strip-btn" aria-pressed="false" title="Visual weight map">Weight</button>
-          <button id="btn-probe"    class="btn view-strip-btn" aria-pressed="false" title="Click canvas to probe pixel color and WCAG contrast">Probe</button>
+          <button id="btn-contrast"    class="btn view-strip-btn" aria-pressed="false" title="Contrast map">Contrast</button>
+          <button id="btn-weight"      class="btn view-strip-btn" aria-pressed="false" title="Visual weight map">Weight</button>
+          <button id="btn-probe"       class="btn view-strip-btn" aria-pressed="false" title="Click canvas to probe pixel color and WCAG contrast">Probe</button>
+          <button id="btn-color-wheel" class="btn view-strip-btn" aria-pressed="false" title="Color wheel harmony analysis">Color Wheel</button>
         </div>
         <div class="view-strip-sep"></div>
         <div class="view-strip-group">
