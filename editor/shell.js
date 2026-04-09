@@ -122,6 +122,14 @@ export function mountEditor(state, projectStore) {
     const brief = storage.getBrief(state.activeBriefId);
     if (!brief) return;
 
+    // ── Unload previous project when switching to a different brief ──
+    if (state.project && state.loadedBriefId !== state.activeBriefId) {
+      await projectStore.flush();
+      state.setProject(null);
+      nameEl.textContent = 'Loading\u2026';
+      nameEl.classList.add('no-project');
+    }
+
     // ── Restore saved project if none is loaded ──
     if (!state.project) {
       let savedProject = null;
@@ -155,6 +163,9 @@ export function mountEditor(state, projectStore) {
         nameEl.classList.add('no-project');
       }
     }
+
+    // Record which brief is now loaded (skip if we bailed early due to corrupt project)
+    state.loadedBriefId = state.activeBriefId;
 
     // ── Load images not already in state ──
     const sources = [
