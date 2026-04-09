@@ -62,6 +62,7 @@ function _renderAll(el, currentValue, palette, projectId, onChange) {
   native.addEventListener('input', () => _apply(el, native, native.value, projectId, onChange));
 
   _wireFavorites(el, native, projectId, onChange);
+  _wireTonesExpansion(el, native, projectId, onChange);
 }
 
 function _favHTML(favorites) {
@@ -83,6 +84,49 @@ function _wireFavorites(el, native, projectId, onChange) {
 
   favRow.querySelector('.cp-add-fav')?.addEventListener('click', () => {
     _addFavorite(el, native, native.value, projectId, onChange);
+  });
+}
+
+function _wireTonesExpansion(el, native, projectId, onChange) {
+  let expandedSwatch = null;
+  let tonesRow = null;
+
+  el.querySelector('.cp-palette').addEventListener('click', e => {
+    const swatch = e.target.closest('.cp-swatch[data-color]');
+    if (!swatch) return;
+
+    // Collapse if same swatch clicked again
+    if (swatch === expandedSwatch) {
+      tonesRow?.remove();
+      expandedSwatch = null;
+      tonesRow = null;
+      return;
+    }
+
+    // Remove existing tones row
+    tonesRow?.remove();
+
+    // Build tones row
+    const tones = _getTones(swatch.dataset.color);
+    tonesRow = document.createElement('div');
+    tonesRow.className = 'cp-tones-row';
+    tonesRow.innerHTML = tones.map((t, i) =>
+      `<button class="cp-swatch cp-tone${i === 2 ? ' cp-tone-base' : ''}" data-color="${t}" title="${t}" style="background:${t}"></button>`
+    ).join('');
+    tonesRow.querySelectorAll('.cp-swatch').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        _apply(el, native, btn.dataset.color, projectId, onChange);
+        tonesRow?.remove();
+        expandedSwatch = null;
+        tonesRow = null;
+      });
+    });
+
+    // Insert after the palette row
+    const paletteRow = el.querySelector('.cp-palette');
+    paletteRow.insertAdjacentElement('afterend', tonesRow);
+    expandedSwatch = swatch;
   });
 }
 
@@ -132,4 +176,66 @@ function _loadFavorites(projectId) {
 
 function _loadRecent(projectId) {
   try { return JSON.parse(localStorage.getItem(`cp-recent-${projectId}`) ?? '[]'); } catch { return []; }
+}
+
+// ── Color math for tones ────────────────────────────────────────────────────
+
+function _hexToRgb(hex) {
+  const h = hex.replace('#', '');
+  return {
+    r: parseInt(h.substring(0, 2), 16),
+    g: parseInt(h.substring(2, 4), 16),
+    b: parseInt(h.substring(4, 6), 16),
+  };
+}
+
+function _rgbToHsl({ r, g, b }) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0, l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return { h: h * 360, s: s * 100, l: l * 100 };
+}
+
+function _hslToRgb({ h, s, l }) {
+  h /= 360; s /= 100; l /= 100;
+  let r, g, b;
+  if (s === 0) { r = g = b = l; }
+  else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1; if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+  return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+}
+
+function _rgbToHex({ r, g, b }) {
+  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
+function _shiftLightness(hex, deltaL) {
+  const hsl = _rgbToHsl(_hexToRgb(hex));
+  hsl.l = Math.max(5, Math.min(95, hsl.l + deltaL));
+  return _rgbToHex(_hslToRgb(hsl));
+}
+
+function _getTones(hex) {
+  return [-40, -20, 0, +20, +40].map(d => _shiftLightness(hex, d));
 }
