@@ -128,12 +128,16 @@ export class Inspector {
 
     const controlsEl = section.querySelector('#insp-layer-controls');
     const fi = this._state.activeFrameIndex;
+    const opts = {
+      palette:   this._state.project?.design_tokens?.palette ?? {},
+      projectId: this._state.project?.project?.id ?? 'default',
+    };
     switch (layer.type) {
-      case 'text':    renderTextToolbar(controlsEl, layer, fi, this._lm);    break;
-      case 'shape':   renderShapeToolbar(controlsEl, layer, fi, this._lm);   break;
+      case 'text':    renderTextToolbar(controlsEl, layer, fi, this._lm, opts);    break;
+      case 'shape':   renderShapeToolbar(controlsEl, layer, fi, this._lm, opts);   break;
       case 'image':
-      case 'logo':    renderImageToolbar(controlsEl, layer, fi, this._lm);   break;
-      case 'overlay': renderOverlayToolbar(controlsEl, layer, fi, this._lm); break;
+      case 'logo':    renderImageToolbar(controlsEl, layer, fi, this._lm, opts);   break;
+      case 'overlay': renderOverlayToolbar(controlsEl, layer, fi, this._lm, opts); break;
     }
   }
 }
