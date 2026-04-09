@@ -85,56 +85,63 @@ describe('extractDominantColors', () => {
 
 import { computeAllHarmonyScores } from '../../editor/color-wheel-analysis.js';
 
-// Helper: make a minimal DominantColor
-function makeColor(h, s, l, canvasPct) {
-  const r = Math.round((l / 100) * 255); // rough approximation for hex
+// Helper: make a minimal DominantColor in OKLCH shape
+function makeColor(h, C, L, canvasPct) {
+  const v = Math.round(L * 255).toString(16).padStart(2, '0');
   return {
-    hex: '#' + r.toString(16).padStart(2,'0').repeat(3),
-    hsl: { h, s, l },
+    hex: '#' + v.repeat(3),
+    oklch: { L, C, h },
     canvasPct,
-    isNeutral: s < 10,
+    isNeutral: C < 0.04,
   };
 }
 
 describe('computeAllHarmonyScores', () => {
   it('returns exactly 6 results', () => {
-    const colors = [makeColor(0, 80, 50, 60), makeColor(180, 80, 50, 40)];
+    const colors = [makeColor(0, 0.2, 0.6, 60), makeColor(180, 0.2, 0.6, 40)];
     const results = computeAllHarmonyScores(colors);
     assertEqual(results.length, 6, 'should return 6 harmony types');
   });
 
   it('sorted by score descending', () => {
-    const colors = [makeColor(0, 80, 50, 60), makeColor(180, 80, 50, 40)];
+    const colors = [makeColor(0, 0.2, 0.6, 60), makeColor(180, 0.2, 0.6, 40)];
     const results = computeAllHarmonyScores(colors);
     for (let i = 1; i < results.length; i++) {
       assert(results[i - 1].score >= results[i].score, 'not sorted by score');
     }
   });
 
-  it('perfectly complementary colors → complementary has score 100', () => {
-    // hue 0° and hue 180° are exactly complementary
-    const colors = [makeColor(0, 80, 50, 60), makeColor(180, 80, 50, 40)];
+  it('perfectly complementary colors (0° + 180°) → score 100', () => {
+    // Both hues land inside ±15° sectors — inHarmony=100, outOfHarmony=0 → score=100
+    const colors = [makeColor(0, 0.2, 0.6, 60), makeColor(180, 0.2, 0.6, 40)];
     const results = computeAllHarmonyScores(colors);
     const comp = results.find(r => r.type === 'complementary');
-    assertEqual(comp.score, 100, `complementary score should be 100 for exact complementary pair, got ${comp.score}`);
+    assertEqual(comp.score, 100, `complementary score should be 100 for exact pair, got ${comp.score}`);
+  });
+
+  it('out-of-harmony color reduces score below 50 (penalty applied)', () => {
+    // Two colors: 0° (50%) and 90° (50%) — for complementary root=0, 90° is outside ±15°
+    // raw = (50 - 0.6×50) / 100 = 0.2 → score 20
+    const colors = [makeColor(0, 0.2, 0.6, 50), makeColor(90, 0.2, 0.6, 50)];
+    const results = computeAllHarmonyScores(colors);
+    const comp = results.find(r => r.type === 'complementary');
+    assert(comp.score < 50, `penalty should drop score below 50, got ${comp.score}`);
   });
 
   it('each result has type, score, rotation, sectors, inHarmony, affecting', () => {
-    const colors = [makeColor(0, 80, 50, 100)];
+    const colors = [makeColor(0, 0.2, 0.6, 100)];
     const results = computeAllHarmonyScores(colors);
     const r = results[0];
-    assert(typeof r.type === 'string', 'type should be string');
-    assert(typeof r.score === 'number', 'score should be number');
+    assert(typeof r.type === 'string',     'type should be string');
+    assert(typeof r.score === 'number',    'score should be number');
     assert(typeof r.rotation === 'number', 'rotation should be number');
-    assert(Array.isArray(r.sectors), 'sectors should be array');
-    assert(Array.isArray(r.inHarmony), 'inHarmony should be array');
-    assert(Array.isArray(r.affecting), 'affecting should be array');
+    assert(Array.isArray(r.sectors),       'sectors should be array');
+    assert(Array.isArray(r.inHarmony),     'inHarmony should be array');
+    assert(Array.isArray(r.affecting),     'affecting should be array');
   });
 
   it('affecting colors have degreesOff property', () => {
-    // hue 0 only — for harmonies requiring multiple hues, other slots are empty
-    // so all 100% should be in harmony for the rotation that puts 0° in a sector
-    const colors = [makeColor(0, 80, 50, 100)];
+    const colors = [makeColor(0, 0.2, 0.6, 100)];
     const results = computeAllHarmonyScores(colors);
     results.forEach(r => {
       r.affecting.forEach(c => {
@@ -144,40 +151,38 @@ describe('computeAllHarmonyScores', () => {
   });
 
   it('neutral colors excluded from inHarmony and affecting', () => {
-    const colors = [makeColor(0, 80, 50, 70), makeColor(0, 5, 90, 30)]; // one chromatic, one neutral
+    const colors = [makeColor(0, 0.2, 0.6, 70), makeColor(0, 0.02, 0.9, 30)]; // neutral C=0.02
     const results = computeAllHarmonyScores(colors);
     results.forEach(r => {
-      const allColors = [...r.inHarmony, ...r.affecting];
-      assert(!allColors.some(c => c.isNeutral), 'neutral color should not appear in inHarmony or affecting');
+      const all = [...r.inHarmony, ...r.affecting];
+      assert(!all.some(c => c.isNeutral), 'neutral should not appear in inHarmony or affecting');
     });
   });
 
   it('all-neutral input → returns 6 results all with score 0', () => {
-    const colors = [makeColor(0, 5, 90, 100)]; // isNeutral=true (s < 10)
+    const colors = [makeColor(0, 0.02, 0.9, 100)]; // C=0.02 → isNeutral=true
     const results = computeAllHarmonyScores(colors);
     assertEqual(results.length, 6, 'should still return 6 types');
     results.forEach(r => {
-      assertEqual(r.score, 0, `score should be 0 for all-neutral input, got ${r.score} for ${r.type}`);
-      assertEqual(r.inHarmony.length, 0, 'inHarmony should be empty for all-neutral');
-      assertEqual(r.affecting.length, 0, 'affecting should be empty for all-neutral');
+      assertEqual(r.score, 0, `score should be 0 for all-neutral, got ${r.score} for ${r.type}`);
+      assertEqual(r.inHarmony.length, 0, 'inHarmony should be empty');
+      assertEqual(r.affecting.length, 0, 'affecting should be empty');
     });
   });
 
-  it('degreesOff is correct — color 90° off a complementary pair has degreesOff > 0', () => {
-    // Hues 0, 180 (complementary) + hue 90 (outside all sectors when comp is at 0/180)
+  it('degreesOff correct — hue 90° outside complementary ±15° sectors', () => {
+    // Complementary at 0°/180° (half-width 15°). Hue 90° is 90° from 0° sector:
+    // degreesOff = _hueDeg(90, 0) - 15 = 90 - 15 = 75
     const colors = [
-      makeColor(0, 80, 50, 50),
-      makeColor(180, 80, 50, 30),
-      makeColor(90, 80, 50, 20),  // 60° away from nearest sector boundary (90-30=60)
+      makeColor(0,   0.2, 0.6, 50),
+      makeColor(180, 0.2, 0.6, 30),
+      makeColor(90,  0.2, 0.6, 20),
     ];
     const results = computeAllHarmonyScores(colors);
     const comp = results.find(r => r.type === 'complementary');
-    const affecting = comp.affecting;
-    assert(affecting.length > 0, 'should have at least one affecting color');
-    affecting.forEach(c => {
-      assert(c.degreesOff > 0, `degreesOff should be > 0 for out-of-sector color, got ${c.degreesOff}`);
-      assert(typeof c.degreesOff === 'number', 'degreesOff should be a number');
-    });
+    const h90 = comp.affecting.find(c => c.oklch.h === 90);
+    assert(h90, 'hue 90 should be in affecting');
+    assertEqual(h90.degreesOff, 75, `degreesOff for hue 90 vs complementary should be 75, got ${h90.degreesOff}`);
   });
 });
 
