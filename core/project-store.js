@@ -19,8 +19,10 @@ export class ProjectStore {
     this._state = state;
     this._timer = null;
 
+    this._handlers = {};
     for (const ev of ['layer:changed', 'frame:changed', 'layers:reordered', 'layer:deleted']) {
-      events.addEventListener(ev, () => this._schedule());
+      this._handlers[ev] = () => this._schedule();
+      events.addEventListener(ev, this._handlers[ev]);
     }
   }
 
@@ -44,6 +46,7 @@ export class ProjectStore {
         detail: { status: 'saved', time: Date.now() },
       }));
     } catch (e) {
+      console.error('[ProjectStore] save failed:', e);
       const reason = (e.name === 'QuotaExceededError') ? 'quota' : 'error';
       events.dispatchEvent(new CustomEvent('project:save-failed', { detail: { reason } }));
       events.dispatchEvent(new CustomEvent('project:save-status', { detail: { status: 'failed' } }));
@@ -57,5 +60,15 @@ export class ProjectStore {
   flush() {
     clearTimeout(this._timer);
     this._write();
+  }
+
+  /**
+   * Remove all event listeners. Call when tearing down the editor session or in tests.
+   */
+  destroy() {
+    clearTimeout(this._timer);
+    for (const [ev, fn] of Object.entries(this._handlers)) {
+      events.removeEventListener(ev, fn);
+    }
   }
 }

@@ -17,6 +17,7 @@ describe('ProjectStore', () => {
     // Should not throw
     ps.flush();
     assert(storage.getProject(BRIEF_ID) === null);
+    ps.destroy();
   });
 
   it('flush() saves project to storage', () => {
@@ -30,6 +31,7 @@ describe('ProjectStore', () => {
     assertEqual(saved.project.title, 'PS Test');
     storage.deleteProject(BRIEF_ID);
     storage.deleteBrief(BRIEF_ID);
+    ps.destroy();
   });
 
   it('flush() dispatches project:save-status saved', () => {
@@ -43,6 +45,7 @@ describe('ProjectStore', () => {
     assertEqual(status, 'saved');
     storage.deleteProject(BRIEF_ID);
     storage.deleteBrief(BRIEF_ID);
+    ps.destroy();
   });
 
   it('_schedule() dispatches project:save-status pending', () => {
@@ -54,5 +57,6 @@ describe('ProjectStore', () => {
     events.dispatchEvent(new CustomEvent('layer:changed'));
     assertEqual(status, 'pending');
     ps.flush(); // clean up timer
+    ps.destroy();
   });
 });
