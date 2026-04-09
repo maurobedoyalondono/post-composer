@@ -1,6 +1,42 @@
 import { computeLayerBounds } from './layers.js';
 
 /**
+ * Pure resize math — no DOM, fully testable.
+ *
+ * @param {'nw'|'ne'|'sw'|'se'} handle — which corner is being dragged
+ * @param {{x: number, y: number, width: number, height: number}} origBounds — canvas px snapshot
+ * @param {number} mx — current mouse x in canvas pixels
+ * @param {number} my — current mouse y in canvas pixels
+ * @param {number|null} aspectRatio — width/height ratio to lock; null = free resize
+ * @param {number} minPx — minimum dimension in pixels
+ * @returns {{x: number, y: number, width: number, height: number}}
+ */
+export function computeResizedBounds(handle, origBounds, mx, my, aspectRatio, minPx) {
+  const { x, y, width, height } = origBounds;
+
+  // Fixed corner = opposite of dragged handle
+  const fixedX = (handle === 'nw' || handle === 'sw') ? x + width  : x;
+  const fixedY = (handle === 'nw' || handle === 'ne') ? y + height : y;
+
+  // Raw new dimensions from fixed corner to mouse
+  let newW = Math.abs(mx - fixedX);
+  let newH = Math.abs(my - fixedY);
+
+  // Constrain to aspect ratio (height follows width)
+  if (aspectRatio != null) newH = newW / aspectRatio;
+
+  // Enforce minimum size
+  newW = Math.max(newW, minPx);
+  newH = Math.max(newH, minPx);
+
+  // New top-left: if fixed corner is on the right/bottom, subtract new size from it
+  const newX = (handle === 'nw' || handle === 'sw') ? fixedX - newW : fixedX;
+  const newY = (handle === 'nw' || handle === 'ne') ? fixedY - newH : fixedY;
+
+  return { x: newX, y: newY, width: newW, height: newH };
+}
+
+/**
  * Handles pointer-based layer selection and drag-to-reposition on an HTMLCanvasElement.
  *
  * Coordinate model:
