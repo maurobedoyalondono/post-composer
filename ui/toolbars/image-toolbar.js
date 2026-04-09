@@ -172,7 +172,7 @@ export function renderImageToolbar(container, layer, frameIndex, layerManager, o
   rotInput.addEventListener('keydown', e => {
     if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
     e.preventDefault();
-    const cur  = layer.rotation_deg ?? 0;
+    const cur  = parseFloat(e.target.value) || 0;
     const step = e.shiftKey ? 10 : 1;
     const next = e.key === 'ArrowUp' ? cur + step : cur - step;
     layerManager.updateLayer(frameIndex, layer.id, { rotation_deg: next });
