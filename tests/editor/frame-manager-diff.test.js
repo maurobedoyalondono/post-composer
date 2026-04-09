@@ -96,6 +96,15 @@ describe('FrameManager.diffProject', () => {
     assert(diff.modified[0].changes.some(c => c.field === 'layer:removed' && c.layerId === 'l1'));
   });
 
+  it('detects modified layer in frame', () => {
+    const state = makeState([makeFrame('f1', { layers: [{ id: 'l1', type: 'text', content: 'old' }] })]);
+    const fm = new FrameManager(state);
+    const incomingFrame = makeFrame('f1', { layers: [{ id: 'l1', type: 'text', content: 'new' }] });
+    const diff = fm.diffProject(makeProject([incomingFrame]));
+    assertEqual(diff.modified.length, 1);
+    assert(diff.modified[0].changes.some(c => c.field === 'layer:modified' && c.layerId === 'l1'));
+  });
+
   it('throws on invalid incoming project', () => {
     const state = makeState([]);
     const fm = new FrameManager(state);

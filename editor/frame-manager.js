@@ -84,7 +84,12 @@ export class FrameManager {
    * Compute frame-level diff between incomingData and current state.project.
    * Throws if incomingData is invalid.
    * @param {object} incomingData
-   * @returns {{ modified: object[], added: object[], removed: object[], unchanged: object[] }}
+   * @returns {{
+   *   modified:  Array<{ frameId: string, label: string, changes: object[], incomingFrame: object, currentFrame: object }>,
+   *   added:     Array<{ frame: object }>,
+   *   removed:   Array<{ frame: object }>,
+   *   unchanged: Array<{ frame: object }>,
+   * }}
    */
   diffProject(incomingData) {
     const { valid, errors } = validate(incomingData);
