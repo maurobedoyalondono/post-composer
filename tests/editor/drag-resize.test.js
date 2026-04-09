@@ -70,4 +70,24 @@ describe('computeResizedBounds — sw handle (top-right fixed)', () => {
     assertEqual(r.width, 250);
     assertEqual(r.height, 150);
   });
+
+  it('applies aspect ratio: height follows clamped width', () => {
+    // fixed=(300,100), ratio=2, mouse at x=200 → newW=100, newH=50
+    const r = computeResizedBounds('sw', orig, 200, 999, 2, MIN);
+    assertEqual(r.width, 100);
+    assertEqual(r.height, 50);
+    assertEqual(r.x, 200); // fixed(300) - newW(100)
+    assertEqual(r.y, 100); // fixed top stays
+  });
+});
+
+describe('computeResizedBounds — aspect ratio + minimum size interaction', () => {
+  it('height follows clamped width when mouse is at fixed corner (aspect locked)', () => {
+    // Mouse at fixed corner → raw newW ~0 → clamped to MIN=10, newH must be 10/ratio not floored independently
+    // ratio=4, so newH should be 10/4=2.5, not 10 (which would break the ratio)
+    const r = computeResizedBounds('se', orig, 101, 101, 4, MIN);
+    assertEqual(r.width, MIN);
+    // height = MIN / ratio = 10 / 4 = 2.5 — follows ratio from clamped width
+    assertEqual(r.height, MIN / 4);
+  });
 });

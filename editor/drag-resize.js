@@ -22,12 +22,9 @@ export function computeResizedBounds(handle, origBounds, mx, my, aspectRatio, mi
   let newW = Math.abs(mx - fixedX);
   let newH = Math.abs(my - fixedY);
 
-  // Constrain to aspect ratio (height follows width)
-  if (aspectRatio != null) newH = newW / aspectRatio;
-
-  // Enforce minimum size
+  // Enforce minimum width first, then constrain height to ratio (or floor independently)
   newW = Math.max(newW, minPx);
-  newH = Math.max(newH, minPx);
+  newH = (aspectRatio != null) ? newW / aspectRatio : Math.max(newH, minPx);
 
   // New top-left: if fixed corner is on the right/bottom, subtract new size from it
   const newX = (handle === 'nw' || handle === 'sw') ? fixedX - newW : fixedX;
