@@ -494,7 +494,7 @@ export function mountEditor(state, projectStore) {
   });
 
   // ── Repaint on events ──────────────────────
-  for (const ev of ['project:loaded', 'frame:changed', 'images:loaded', 'layer:changed', 'layer:deleted', 'layers:reordered']) {
+  for (const ev of ['project:loaded', 'frame:changed', 'images:loaded', 'layer:changed', 'layer:deleted', 'layers:reordered', 'globals:changed']) {
     events.addEventListener(ev, _repaint);
   }
 }

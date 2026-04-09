@@ -84,6 +84,9 @@ export class Inspector {
 
       <div class="inspector-section" id="insp-layer-props">
       </div>
+
+      <div class="inspector-section" id="insp-globals">
+      </div>
     `;
 
     this._el.querySelector('#insp-pattern-select')?.addEventListener('change', e => {
@@ -95,6 +98,7 @@ export class Inspector {
 
     this._renderLayerSection();
     this._renderCanvasSection(frame);
+    this._renderGlobalsSection();
   }
 
   /** Re-render only the layer section — called on layer:changed to avoid full flicker. */
@@ -140,6 +144,7 @@ export class Inspector {
       images:       this._state.images,
       canvasWidth:  this._state.project?.export?.width_px  ?? 1080,
       canvasHeight: this._state.project?.export?.height_px ?? 1350,
+      globals:      this._state.project?.globals ?? {},
     };
     switch (layer.type) {
       case 'text':    renderTextToolbar(controlsEl, layer, fi, this._lm, opts);    break;
@@ -217,6 +222,43 @@ export class Inspector {
         e.target.checked = true; // revert checkbox until modal confirms
         this._onMultiImageToggleOff(frame);
       }
+    });
+  }
+
+  /** Render the Project Settings section: border_width_px. */
+  _renderGlobalsSection() {
+    const section = this._el.querySelector('#insp-globals');
+    if (!section) return;
+    const project = this._state.project;
+    if (!project) { section.innerHTML = ''; return; }
+
+    const globals       = project.globals ?? {};
+    const borderWidthPx = globals.border_width_px ?? 4;
+
+    section.innerHTML = `
+      <div class="inspector-section-title">Project Settings</div>
+      <div class="inspector-row">
+        <span class="label">Border width</span>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <input type="number" id="insp-border-width"
+            value="${borderWidthPx}"
+            min="0" step="1"
+            style="width:52px;background:var(--color-surface-2);border:1px solid var(--color-border);border-radius:var(--radius-sm);color:var(--color-text);font-size:12px;padding:3px 5px;"
+            title="Border width in pixels — applied to all image layers with border enabled">
+          <span style="font-size:11px;color:var(--color-text-muted);">px</span>
+        </div>
+      </div>
+    `;
+
+    section.querySelector('#insp-border-width').addEventListener('change', e => {
+      const val = parseInt(e.target.value, 10);
+      if (isNaN(val) || val < 0) {
+        e.target.value = (project.globals?.border_width_px ?? 4);
+        return;
+      }
+      if (!project.globals) project.globals = {};
+      project.globals.border_width_px = val;
+      events.dispatchEvent(new CustomEvent('globals:changed'));
     });
   }
 
