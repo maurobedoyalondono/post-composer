@@ -28,13 +28,15 @@ export class Renderer {
 
     ctx.clearRect(0, 0, w, h);
 
-    // Background fill
-    ctx.fillStyle = project.design_tokens?.palette?.background ?? '#000000';
+    // Background fill — frame bg_color overrides project palette
+    ctx.fillStyle = frame.bg_color ?? project.design_tokens?.palette?.background ?? '#000000';
     ctx.fillRect(0, 0, w, h);
 
-    // Background photo (keyed by image_filename)
-    const bg = images?.get(frame.image_filename);
-    if (bg) _drawCoverImage(ctx, bg, w, h);
+    // Background photo — skipped in multi_image mode (image layers render themselves)
+    if (!frame.multi_image) {
+      const bg = images?.get(frame.image_filename);
+      if (bg) _drawCoverImage(ctx, bg, w, h);
+    }
 
     // Layers in declaration order
     for (const layer of (frame.layers ?? [])) {
