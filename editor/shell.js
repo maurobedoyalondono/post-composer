@@ -258,22 +258,40 @@ export function mountEditor(state, projectStore) {
 
   imgInput.addEventListener('change', async e => {
     const files = Array.from(e.target.files);
+    imgInput.value = '';
     if (!files.length) return;
+
+    // Detect filename collisions
+    const collisions    = files.filter(f => state.images.has(f.name));
+    const nonCollisions = files.filter(f => !state.images.has(f.name));
+    let toLoad = [...nonCollisions];
+
+    if (collisions.length > 0) {
+      const names = collisions.map(f => f.name).join(', ');
+      if (confirm(`These images are already loaded:\n${names}\n\nReplace them?`)) {
+        toLoad = [...toLoad, ...collisions];
+      }
+      // If declined, collisions are simply skipped
+    }
+
+    if (!toLoad.length) return;
+
     try {
-      await frameManager.loadImages(files);
-      // Persist to localStorage so images survive reload and tab close
+      await frameManager.loadImages(toLoad);
       if (state.activeBriefId) {
         const imageMap = {};
-        files.forEach(f => {
+        toLoad.forEach(f => {
           const img = state.images.get(f.name);
           if (img?.src) imageMap[f.name] = img.src;
         });
-        storage.saveImages(state.activeBriefId, imageMap);
+        const failed = storage.saveImages(state.activeBriefId, imageMap);
+        if (failed.length > 0) {
+          _showToast(`${failed.length} image(s) could not be saved (storage full): ${failed.join(', ')}`);
+        }
       }
     } catch (err) {
-      console.warn('Image load error:', err);
+      _showToast(`Image load error: ${err.message}`);
     }
-    imgInput.value = '';
   });
 
   // ── View strip: composition guides ─────────
