@@ -47,13 +47,17 @@ export function showMultiImageRevertModal(imageLayers, onConfirm) {
   modal.querySelector('#modal-confirm').addEventListener('click', () => {
     const selectedId   = modal.querySelector('input[name="modal-bg-img"]:checked')?.value;
     const deleteUnused = modal.querySelector('#modal-delete-unused').checked;
-    overlay.remove();
-    if (selectedId) onConfirm(selectedId, deleteUnused);
+    if (selectedId) {
+      overlay.remove();
+      onConfirm(selectedId, deleteUnused);
+    }
   });
 }
 
 function _escAttr(str) {
-  return String(str).replace(/"/g, '&quot;');
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;');
 }
 
 function _escHtml(str) {
