@@ -70,6 +70,11 @@ export class Renderer {
         drawCenterOfMass(ctx, x, y);
       }
     }
+
+    // Color wheel affecting-pixels overlay — stacks on top of analysis overlay
+    if (opts.colorWheelOverlay) {
+      ctx.putImageData(new ImageData(opts.colorWheelOverlay, w, h), 0, 0);
+    }
   }
 }
 
