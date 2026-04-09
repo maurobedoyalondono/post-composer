@@ -38,6 +38,7 @@ async function loadImage(filename) {
 
 async function init() {
   const res     = await fetch(jsonPath);
+  if (!res.ok) throw new Error(`[preview] Failed to load project JSON: ${res.status} ${res.statusText} — ${jsonPath}`);
   const project = await res.json();
 
   const frame = project.frames.find(f => f.id === frameId);
@@ -68,13 +69,21 @@ async function init() {
 }
 
 window.renderFrame = async (updatedFrame) => {
+  if (!window.__project) {
+    document.body.dataset.status = 'error';
+    console.error('[preview] renderFrame called before init completed');
+    return;
+  }
   document.body.dataset.status = 'rendering';
-  if (window.__project) {
+  try {
     const idx = window.__project.frames.findIndex(f => f.id === updatedFrame.id);
     if (idx !== -1) window.__project.frames[idx] = updatedFrame;
+    renderer.renderFrame(canvas, updatedFrame, window.__project, window.__images, {});
+    document.body.dataset.status = 'ready';
+  } catch (err) {
+    console.error('[preview] renderFrame failed:', err);
+    document.body.dataset.status = 'error';
   }
-  renderer.renderFrame(canvas, updatedFrame, window.__project, window.__images, {});
-  document.body.dataset.status = 'ready';
 };
 
 init().catch(err => {
