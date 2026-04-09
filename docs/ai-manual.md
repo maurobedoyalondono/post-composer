@@ -287,7 +287,7 @@ Every frame must declare one. These are not aesthetic labels — they are struct
   "content": "Light, shadow,\nand geological time.",
   "font": { "family": "Cormorant Garamond", "weight": 700, "size_pct": 8, "color": "#E0D8CE", "line_height": 1.15, "letter_spacing_em": -0.01, "align": "center" },
   "max_width_pct": 60,
-  "position": { "zone": "middle-center", "offset_x_pct": -30, "offset_y_pct": -4 }
+  "position": { "zone": "middle-center", "offset_x_pct": 0, "offset_y_pct": 0 }
 }
 ```
 
@@ -398,7 +398,7 @@ Size steps (use these — do not invent values outside the scale):
   "font": {
     "family": "Inter",
     "weight": 400,
-    "size_pct": 2.2,
+    "size_pct": 2.5,
     "color": "#B85530",
     "line_height": 1.2,
     "letter_spacing_em": 0.15,
@@ -475,6 +475,8 @@ Stats content standards — write numbers in full:
 - "Over 100" not "100+"
 - "Nearly 200 kilometers" not "~200 km"
 - "50 percent" not "50%"
+
+These standards apply to stats_block items. `data-callout` single display numerals (rendered as large hero text, not in a stats_block) may use abbreviated forms like "300M" or "2.4B" when visual impact requires it.
 
 ---
 
