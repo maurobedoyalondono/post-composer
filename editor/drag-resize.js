@@ -33,31 +33,30 @@ export function computeResizedBounds(handle, origBounds, mx, my, aspectRatio, mi
   return { x: newX, y: newY, width: newW, height: newH };
 }
 
-/**
- * Handles pointer-based layer selection and drag-to-reposition on an HTMLCanvasElement.
- *
- * Coordinate model:
- *   CSS mouse coords → canvas full-resolution coords via scaleX/scaleY.
- *   Delta is applied to the original position stored at pointerdown.
- *   During drag: position is mutated directly (no event) and onRepaint() is called.
- *   On pointerup: layerManager.emitChanged() fires layer:changed for inspector/panel to sync.
- */
 export class DragResize {
   /**
    * @param {HTMLCanvasElement} canvas
    * @param {import('../core/state.js').AppState} state
    * @param {import('./layer-manager.js').LayerManager} layerManager
-   * @param {() => void} onRepaint — called after each position update during drag
+   * @param {() => void} onRepaint
    */
   constructor(canvas, state, layerManager, onRepaint) {
-    this._canvas    = canvas;
-    this._state     = state;
-    this._lm        = layerManager;
-    this._repaint   = onRepaint;
-    this._dragging  = false;
-    this._startX    = 0;
-    this._startY    = 0;
-    this._origPos   = null; // snapshot of layer.position at pointerdown
+    this._canvas   = canvas;
+    this._state    = state;
+    this._lm       = layerManager;
+    this._repaint  = onRepaint;
+
+    // Drag state
+    this._dragging = false;
+    this._startX   = 0;
+    this._startY   = 0;
+    this._origPos  = null;
+
+    // Resize state
+    this._resizing     = false;
+    this._resizeHandle = null;  // 'nw' | 'ne' | 'sw' | 'se'
+    this._origBounds   = null;  // { x, y, width, height } in canvas px at pointerdown
+    this._aspectRatio  = null;  // natural image ratio, null = free
 
     canvas.addEventListener('pointerdown',   this._onDown.bind(this));
     canvas.addEventListener('pointermove',   this._onMove.bind(this));
@@ -77,9 +76,24 @@ export class DragResize {
   }
 
   /**
-   * Find the top-most non-hidden layer whose bounding box contains (cx, cy).
-   * Tests layers in reverse order (last layer = visually on top).
+   * Test whether (cx, cy) is within `radius` px of a corner of `bounds`.
+   * Returns the handle name ('nw','ne','sw','se') or null.
    */
+  _hitHandle(cx, cy, bounds, radius) {
+    const { x, y, width, height } = bounds;
+    const corners = {
+      nw: [x,         y         ],
+      ne: [x + width, y         ],
+      sw: [x,         y + height],
+      se: [x + width, y + height],
+    };
+    for (const [handle, [hx, hy]] of Object.entries(corners)) {
+      if (Math.abs(cx - hx) <= radius && Math.abs(cy - hy) <= radius) return handle;
+    }
+    return null;
+  }
+
+  /** Find the top-most non-hidden layer whose bounding box contains (cx, cy). */
   _hitTest(cx, cy) {
     const frame = this._state.activeFrame;
     if (!frame?.layers) return null;
@@ -99,13 +113,45 @@ export class DragResize {
 
   _onDown(e) {
     const { x, y } = this._toCanvas(e);
+    const w = this._canvas.width;
+    const h = this._canvas.height;
+
+    // Check resize handles on the currently selected layer first
+    const selId = this._state.selectedLayerId;
+    if (selId) {
+      const selLayer = this._state.activeFrame?.layers?.find(l => l.id === selId);
+      if (selLayer) {
+        const bounds = computeLayerBounds(selLayer, w, h);
+        const handle = this._hitHandle(x, y, bounds, 8);
+        if (handle) {
+          this._resizing     = true;
+          this._resizeHandle = handle;
+          this._origBounds   = { ...bounds };
+
+          // Aspect ratio: lock for image layers using natural image dimensions
+          if (selLayer.type === 'image' || selLayer.type === 'logo') {
+            const img = this._state.images?.get(selLayer.src);
+            this._aspectRatio = img
+              ? img.naturalWidth / img.naturalHeight
+              : null;
+          } else {
+            this._aspectRatio = null;
+          }
+
+          this._canvas.setPointerCapture(e.pointerId);
+          e.preventDefault();
+          return;
+        }
+      }
+    }
+
+    // Fall through to drag (existing logic unchanged)
     const layer = this._hitTest(x, y);
     if (layer) {
       this._lm.selectLayer(layer.id);
       this._dragging = true;
       this._startX   = x;
       this._startY   = y;
-      // Deep-copy position so we always delta from the original
       this._origPos  = layer.position ? { ...layer.position } : null;
       this._canvas.setPointerCapture(e.pointerId);
     } else {
@@ -115,40 +161,88 @@ export class DragResize {
   }
 
   _onMove(e) {
-    if (!this._dragging) return;
     const { x, y } = this._toCanvas(e);
-    const dx = x - this._startX;
-    const dy = y - this._startY;
-    const w  = this._canvas.width;
-    const h  = this._canvas.height;
+    const w = this._canvas.width;
+    const h = this._canvas.height;
 
-    const layer = this._state.activeFrame?.layers?.find(
-      l => l.id === this._state.selectedLayerId
-    );
-    if (!layer) return;
+    // ── Resize branch ──────────────────────────────────────────────────────
+    if (this._resizing) {
+      const layer = this._state.activeFrame?.layers?.find(
+        l => l.id === this._state.selectedLayerId
+      );
+      if (!layer) return;
 
-    const pos = this._origPos;
-    if (!pos || pos.zone === 'absolute') {
-      layer.position = {
-        zone:  'absolute',
-        x_pct: (pos?.x_pct ?? 0) + (dx / w * 100),
-        y_pct: (pos?.y_pct ?? 0) + (dy / h * 100),
-      };
-    } else {
-      layer.position = {
-        ...pos,
-        offset_x_pct: (pos.offset_x_pct ?? 0) + (dx / w * 100),
-        offset_y_pct: (pos.offset_y_pct ?? 0) + (dy / h * 100),
-      };
+      const minPx = Math.min(w, h) * 0.04; // 4% of smaller canvas dimension
+      const { x: nx, y: ny, width: nw, height: nh } = computeResizedBounds(
+        this._resizeHandle, this._origBounds, x, y, this._aspectRatio, minPx
+      );
+
+      layer.position  = { zone: 'absolute', x_pct: nx / w * 100, y_pct: ny / h * 100 };
+      layer.width_pct  = nw / w * 100;
+      layer.height_pct = nh / h * 100;
+      this._repaint();
+      return;
     }
-    this._repaint();
+
+    // ── Drag branch (unchanged) ────────────────────────────────────────────
+    if (this._dragging) {
+      const dx = x - this._startX;
+      const dy = y - this._startY;
+
+      const layer = this._state.activeFrame?.layers?.find(
+        l => l.id === this._state.selectedLayerId
+      );
+      if (!layer) return;
+
+      const pos = this._origPos;
+      if (!pos || pos.zone === 'absolute') {
+        layer.position = {
+          zone:  'absolute',
+          x_pct: (pos?.x_pct ?? 0) + (dx / w * 100),
+          y_pct: (pos?.y_pct ?? 0) + (dy / h * 100),
+        };
+      } else {
+        layer.position = {
+          ...pos,
+          offset_x_pct: (pos.offset_x_pct ?? 0) + (dx / w * 100),
+          offset_y_pct: (pos.offset_y_pct ?? 0) + (dy / h * 100),
+        };
+      }
+      this._repaint();
+      return;
+    }
+
+    // ── Cursor feedback (no active operation) ──────────────────────────────
+    const selId = this._state.selectedLayerId;
+    if (selId) {
+      const selLayer = this._state.activeFrame?.layers?.find(l => l.id === selId);
+      if (selLayer) {
+        const bounds = computeLayerBounds(selLayer, w, h);
+        const handle = this._hitHandle(x, y, bounds, 8);
+        if (handle) {
+          this._canvas.style.cursor = (handle === 'nw' || handle === 'se')
+            ? 'nw-resize'
+            : 'ne-resize';
+          return;
+        }
+      }
+    }
+
+    const hovered = this._hitTest(x, y);
+    this._canvas.style.cursor = hovered ? 'move' : 'default';
   }
 
   _onUp(e) {
-    if (this._dragging && this._state.selectedLayerId != null) {
+    if (this._resizing && this._state.selectedLayerId != null) {
+      this._lm.emitChanged(this._state.activeFrameIndex, this._state.selectedLayerId);
+    } else if (this._dragging && this._state.selectedLayerId != null) {
       this._lm.emitChanged(this._state.activeFrameIndex, this._state.selectedLayerId);
     }
-    this._dragging = false;
-    this._origPos  = null;
+    this._dragging     = false;
+    this._resizing     = false;
+    this._resizeHandle = null;
+    this._origBounds   = null;
+    this._aspectRatio  = null;
+    this._origPos      = null;
   }
 }
