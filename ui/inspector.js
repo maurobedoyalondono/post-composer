@@ -134,10 +134,12 @@ export class Inspector {
     const controlsEl = section.querySelector('#insp-layer-controls');
     const fi = this._state.activeFrameIndex;
     const opts = {
-      palette:   this._state.project?.design_tokens?.palette ?? {},
-      projectId: this._state.project?.project?.id ?? 'default',
-      frame:     this._state.activeFrame,
-      images:    this._state.images,
+      palette:      this._state.project?.design_tokens?.palette ?? {},
+      projectId:    this._state.project?.project?.id ?? 'default',
+      frame:        this._state.activeFrame,
+      images:       this._state.images,
+      canvasWidth:  this._state.project?.export?.width_px  ?? 1080,
+      canvasHeight: this._state.project?.export?.height_px ?? 1350,
     };
     switch (layer.type) {
       case 'text':    renderTextToolbar(controlsEl, layer, fi, this._lm, opts);    break;

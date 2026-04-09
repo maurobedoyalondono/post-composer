@@ -6,20 +6,27 @@
  * @param {object} layer
  * @param {number} frameIndex
  * @param {import('../../editor/layer-manager.js').LayerManager} layerManager
- * @param {{ palette: object, projectId: string, frame: object, images: Map }} opts
+ * @param {{ palette: object, projectId: string, frame: object, images: Map,
+ *           canvasWidth: number, canvasHeight: number }} opts
  */
 export function renderImageToolbar(container, layer, frameIndex, layerManager, opts = {}) {
-  const fit      = layer.fit ?? 'fill';
-  const showSize = !!(opts.frame?.multi_image);
+  const fit       = layer.fit ?? 'fill';
+  const showSize  = !!(opts.frame?.multi_image);
   const widthPct  = layer.width_pct  ?? 100;
   const heightPct = layer.height_pct ?? 100;
 
-  // Determine aspect ratio: natural image dimensions > stored layer ratio > unknown
-  const img         = opts.images?.get(layer.src);
+  // Canvas dimensions — needed for correct width↔height conversion.
+  // width_pct and height_pct are independent percentages of DIFFERENT axes, so
+  // maintaining pixel aspect ratio requires: height_pct = width_pct * cw / (ratio * ch)
+  const cw = opts.canvasWidth  ?? 1080;
+  const ch = opts.canvasHeight ?? 1350;
+
+  // Aspect ratio resolution: natural image > stored on layer > unknown
+  const img          = opts.images?.get(layer.src);
   const naturalRatio = (img && img.naturalWidth > 0) ? img.naturalWidth / img.naturalHeight : null;
   const storedRatio  = layer.aspect_ratio ?? null;
-  const activeRatio  = naturalRatio ?? storedRatio;  // what we use for width→height math
-  const ratioKnown   = naturalRatio != null;         // true = auto-detected, no editable field needed
+  const activeRatio  = naturalRatio ?? storedRatio;  // what we use for math
+  const ratioKnown   = naturalRatio != null;         // auto-detected from loaded image
 
   container.innerHTML = `
     <div class="tb-grid">
@@ -45,18 +52,20 @@ export function renderImageToolbar(container, layer, frameIndex, layerManager, o
       </div>
       <div class="ctrl">
         <span class="ctrl-label">Height %</span>
-        <input type="number" id="ctx-img-height" value="${heightPct.toFixed(1)}" min="1" max="200" step="1" readonly style="opacity:0.6;cursor:default;" title="Locked to aspect ratio — edit Width to resize">
+        <input type="number" id="ctx-img-height" value="${heightPct.toFixed(1)}" min="1" max="200" step="1" readonly
+          style="opacity:0.6;cursor:default;"
+          title="Locked to aspect ratio — edit Width to resize">
       </div>
-      ${!ratioKnown ? `
       <div class="ctrl">
         <span class="ctrl-label">Aspect ratio</span>
         <input type="number" id="ctx-img-ratio"
-          value="${storedRatio != null ? storedRatio.toFixed(4) : ''}"
+          value="${activeRatio != null ? activeRatio.toFixed(4) : ''}"
           placeholder="e.g. 1.7778"
-          min="0.1" max="10" step="0.0001"
-          title="Width ÷ Height — set manually when image dimensions are unavailable">
+          min="0.1" max="20" step="0.0001"
+          ${ratioKnown
+            ? 'readonly style="opacity:0.6;cursor:default;" title="Auto-detected from image (width ÷ height in pixels)"'
+            : 'title="Width ÷ height in pixels — define manually (e.g. 1.7778 for 16:9)"'}>
       </div>
-      ` : ''}
       ` : ''}
 
       <div class="tb-actions">
@@ -80,14 +89,13 @@ export function renderImageToolbar(container, layer, frameIndex, layerManager, o
   });
 
   if (showSize) {
-    // Aspect ratio manual input (shown only when natural dimensions unavailable)
-    const ratioInput = container.querySelector('#ctx-img-ratio');
-    if (ratioInput) {
-      ratioInput.addEventListener('change', e => {
+    // Editable aspect ratio — only when natural dimensions are unavailable
+    if (!ratioKnown) {
+      container.querySelector('#ctx-img-ratio').addEventListener('change', e => {
         const val = parseFloat(e.target.value);
         if (!isNaN(val) && val > 0) {
           layerManager.updateLayer(frameIndex, layer.id, { aspect_ratio: val });
-          layer.aspect_ratio = val; // keep in-scope reference current
+          layer.aspect_ratio = val; // keep in-scope reference current for width handler
         }
       });
     }
@@ -96,16 +104,24 @@ export function renderImageToolbar(container, layer, frameIndex, layerManager, o
       const newWidthPct = parseFloat(e.target.value);
       if (isNaN(newWidthPct) || newWidthPct < 1) return;
 
-      // Use natural ratio, then stored ratio, then 1:1 fallback
+      // Re-read ratio in case it was just set via the ratio input
       const ratio = naturalRatio ?? layer.aspect_ratio ?? null;
-      const newHeightPct = ratio != null ? newWidthPct / ratio : newWidthPct;
+
+      // Correct formula accounting for non-square canvases:
+      //   pixel_width  = newWidthPct / 100 * cw
+      //   pixel_height = pixel_width / ratio
+      //   height_pct   = pixel_height / ch * 100
+      //                = newWidthPct * cw / (ratio * ch)
+      const newHeightPct = ratio != null ? newWidthPct * cw / (ratio * ch) : newWidthPct;
 
       layerManager.updateLayer(frameIndex, layer.id, {
         width_pct:  newWidthPct,
         height_pct: newHeightPct,
       });
 
-      // Update the read-only height display
+      // Attempt to update the read-only height display directly.
+      // (The layer:changed event will also trigger a full re-render, but
+      //  this keeps the field in sync if the re-render races the DOM update.)
       const heightInput = container.querySelector('#ctx-img-height');
       if (heightInput) heightInput.value = newHeightPct.toFixed(1);
     });
