@@ -109,7 +109,7 @@ describe('computeAllHarmonyScores', () => {
     const colors = [makeColor(0, 80, 50, 60), makeColor(180, 80, 50, 40)];
     const results = computeAllHarmonyScores(colors);
     const comp = results.find(r => r.type === 'complementary');
-    assert(comp.score >= 95, `complementary score should be near 100, got ${comp.score}`);
+    assertEqual(comp.score, 100, `complementary score should be 100 for exact complementary pair, got ${comp.score}`);
   });
 
   it('each result has type, score, rotation, sectors, inHarmony, affecting', () => {
@@ -142,6 +142,34 @@ describe('computeAllHarmonyScores', () => {
     results.forEach(r => {
       const allColors = [...r.inHarmony, ...r.affecting];
       assert(!allColors.some(c => c.isNeutral), 'neutral color should not appear in inHarmony or affecting');
+    });
+  });
+
+  it('all-neutral input → returns 6 results all with score 0', () => {
+    const colors = [makeColor(0, 5, 90, 100)]; // isNeutral=true (s < 10)
+    const results = computeAllHarmonyScores(colors);
+    assertEqual(results.length, 6, 'should still return 6 types');
+    results.forEach(r => {
+      assertEqual(r.score, 0, `score should be 0 for all-neutral input, got ${r.score} for ${r.type}`);
+      assertEqual(r.inHarmony.length, 0, 'inHarmony should be empty for all-neutral');
+      assertEqual(r.affecting.length, 0, 'affecting should be empty for all-neutral');
+    });
+  });
+
+  it('degreesOff is correct — color 90° off a complementary pair has degreesOff > 0', () => {
+    // Hues 0, 180 (complementary) + hue 90 (outside all sectors when comp is at 0/180)
+    const colors = [
+      makeColor(0, 80, 50, 50),
+      makeColor(180, 80, 50, 30),
+      makeColor(90, 80, 50, 20),  // 60° away from nearest sector boundary (90-30=60)
+    ];
+    const results = computeAllHarmonyScores(colors);
+    const comp = results.find(r => r.type === 'complementary');
+    const affecting = comp.affecting;
+    assert(affecting.length > 0, 'should have at least one affecting color');
+    affecting.forEach(c => {
+      assert(c.degreesOff > 0, `degreesOff should be > 0 for out-of-sector color, got ${c.degreesOff}`);
+      assert(typeof c.degreesOff === 'number', 'degreesOff should be a number');
     });
   });
 });

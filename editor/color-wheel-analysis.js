@@ -185,6 +185,13 @@ const HARMONY_DEFS = {
   ],
 };
 
+// _inSectors operates on resolved sectors: { centerHue, halfWidth }
+// (produced by computeAllHarmonyScores after finding bestRotation)
+// _scoreRotation operates on definition sectors: { offset, halfWidth }
+// (from HARMONY_DEFS, relative to rootHue)
+// The two different shapes are intentional: _scoreRotation inlines the math
+// for performance (called 2160 times), while _inSectors uses resolved sectors
+// to classify the final inHarmony/affecting lists (called ≤8 times).
 function _inSectors(hue, sectors) {
   return sectors.some(({ centerHue, halfWidth }) =>
     _hueDeg(hue, centerHue) <= halfWidth
@@ -221,7 +228,7 @@ function _scoreRotation(hist, rootHue, sectorDefs, totalChromatic) {
  * Compute best-fit harmony scores for all 6 harmony types.
  * Returns results sorted by score descending.
  * @param {Array<{hex:string,hsl:{h,s,l},canvasPct:number,isNeutral:boolean}>} dominantColors
- * @returns {Array<{type:string,score:number,rotation:number,sectors:Array<{centerHue:number,halfWidth:number}>,inHarmony:object[],affecting:Array<{degreesOff:number}>}>}
+ * @returns {Array<{type:string,score:number,rotation:number,sectors:Array<{centerHue:number,halfWidth:number}>,inHarmony:object[],affecting:Array<{hex:string,hsl:object,canvasPct:number,isNeutral:boolean,degreesOff:number}>}>}
  */
 export function computeAllHarmonyScores(dominantColors) {
   const chromatic = dominantColors.filter(c => !c.isNeutral);
