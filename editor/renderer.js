@@ -38,8 +38,9 @@ export class Renderer {
       if (bg) _drawCoverImage(ctx, bg, w, h);
     }
 
-    // Layers in declaration order
+    // Layers in declaration order — skip hidden layers
     for (const layer of (frame.layers ?? [])) {
+      if (layer.hidden) continue;
       renderLayer(ctx, layer, w, h, images);
     }
 

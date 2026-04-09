@@ -65,22 +65,29 @@ export class LayersPanel {
         <div class="layers-panel-header">Layers</div>
         <div class="layers-panel-empty">No layers</div>
       `;
-      // Re-wire drag: innerHTML replacement creates a new header element each time.
       this._initDrag();
       return;
     }
 
     const layers = [...frame.layers].reverse();
     const selectedId = this._state.selectedLayerId;
+    const anyVisible = frame.layers.some(l => !l.hidden);
 
     this._el.innerHTML = `
-      <div class="layers-panel-header">Layers</div>
+      <div class="layers-panel-header">
+        Layers
+        <button class="toggle-all-btn" title="${anyVisible ? 'Hide all layers' : 'Show all layers'}"
+          style="margin-left:auto;font-size:10px;padding:2px 6px;">
+          ${anyVisible ? 'Hide all' : 'Show all'}
+        </button>
+      </div>
       <ul class="layers-list">
         ${layers.map((l, visIdx) => {
           const realIdx = frame.layers.length - 1 - visIdx;
           return `<li class="layer-item${l.id === selectedId ? ' active' : ''}"
                       data-id="${_esc(l.id)}" data-idx="${realIdx}" draggable="true">
-            <button class="vis-btn${l.hidden ? ' hidden' : ''}" data-id="${_esc(l.id)}" title="Toggle visibility">👁</button>
+            <button class="vis-btn${l.hidden ? ' hidden' : ''}" data-id="${_esc(l.id)}" title="Toggle visibility"
+              style="opacity:${l.hidden ? '0.3' : '1'};">👁</button>
             <span class="layer-type">${_esc(l.type)}</span>
             <span class="layer-id" title="${_esc(l.id)}">${_esc(l.id)}</span>
             <button class="del-btn" data-id="${_esc(l.id)}" title="Delete layer">✕</button>
@@ -88,7 +95,6 @@ export class LayersPanel {
         }).join('')}
       </ul>
     `;
-    // Re-wire drag: innerHTML replacement creates a new header element each time.
     this._initDrag();
   }
 
@@ -125,6 +131,16 @@ export class LayersPanel {
   }
 
   _onClick(e) {
+    // Hide all / Show all
+    if (e.target.closest('.toggle-all-btn')) {
+      const frame = this._state.activeFrame;
+      if (!frame?.layers) return;
+      const anyVisible = frame.layers.some(l => !l.hidden);
+      frame.layers.forEach(l => { l.hidden = anyVisible; });
+      events.dispatchEvent(new CustomEvent('frame:changed', { detail: { index: this._state.activeFrameIndex } }));
+      return;
+    }
+
     const delBtn = e.target.closest('.del-btn');
     if (delBtn) {
       this._lm.deleteLayer(this._state.activeFrameIndex, delBtn.dataset.id);
