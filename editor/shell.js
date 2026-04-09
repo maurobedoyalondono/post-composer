@@ -15,6 +15,7 @@ import { events }               from '../core/events.js';
 import { router }               from '../core/router.js';
 import { loadProjectFonts }     from '../shared/fonts.js';
 import { storage }              from '../core/storage.js';
+import { showProjectDiffModal } from '../ui/modals/project-diff-modal.js';
 
 /**
  * Mount the editor shell into #editor-view.
@@ -205,17 +206,53 @@ export function mountEditor(state, projectStore) {
   jsonInput.addEventListener('change', async e => {
     const file = e.target.files[0];
     if (!file) return;
-    try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-      frameManager.loadProject(data);
-      await loadProjectFonts(data.design_tokens);
-      // Ensure brief images are loaded for this project (loads any that are missing)
-      await _applyActiveBrief();
-    } catch (err) {
-      alert(`Failed to load project: ${err.message}`);
-    }
     jsonInput.value = '';
+
+    let data;
+    try {
+      data = JSON.parse(await file.text());
+    } catch (err) {
+      _showToast(`Invalid JSON file: ${err.message}`);
+      return;
+    }
+
+    // Validate before going any further
+    try {
+      if (!state.project) {
+        // No project loaded yet — load directly
+        frameManager.loadProject(data);
+        await loadProjectFonts(data.design_tokens);
+        await _applyActiveBrief();
+        projectStore.flush();
+        return;
+      }
+
+      // Project loaded — go through diff modal
+      const diff = frameManager.diffProject(data);
+      showProjectDiffModal(diff, ({ replaceFrameIds, addFrameIds }) => {
+        // Apply replace selections
+        for (const { frameId, incomingFrame } of diff.modified) {
+          if (replaceFrameIds.has(frameId)) {
+            const idx = state.project.frames.findIndex(f => f.id === frameId);
+            if (idx >= 0) state.project.frames[idx] = incomingFrame;
+          }
+        }
+        // Apply add selections
+        for (const { frame } of diff.added) {
+          if (addFrameIds.has(frame.id)) {
+            state.project.frames.push(frame);
+          }
+        }
+        // Re-set active frame to 0 to avoid out-of-range index
+        state.activeFrameIndex = 0;
+        state.selectedLayerId  = null;
+        events.dispatchEvent(new CustomEvent('project:loaded', { detail: state.project }));
+        loadProjectFonts(state.project.design_tokens);
+        projectStore.flush();
+      });
+    } catch (err) {
+      _showToast(`Failed to load file: ${err.message}`);
+    }
   });
 
   imgInput.addEventListener('change', async e => {
