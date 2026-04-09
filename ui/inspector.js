@@ -4,6 +4,7 @@ import { renderTextToolbar }   from './toolbars/text-toolbar.js';
 import { renderShapeToolbar }  from './toolbars/shape-toolbar.js';
 import { renderImageToolbar }  from './toolbars/image-toolbar.js';
 import { renderOverlayToolbar} from './toolbars/overlay-toolbar.js';
+import { showMultiImageRevertModal } from './modals/multi-image-revert.js';
 
 const VALID_COMPOSITION_PATTERNS = [
   'editorial-anchor', 'minimal-strip', 'data-callout',
@@ -217,13 +218,48 @@ export class Inspector {
     });
   }
 
-  /** Called when user toggles multi_image off. Wired in Task 7. */
+  /** Show the revert modal when turning off multi_image. */
   _onMultiImageToggleOff(frame) {
-    // Stub — implemented in Task 7
-    frame.multi_image = false;
-    const checkbox = this._el.querySelector('#insp-canvas #insp-multi-image');
-    if (checkbox) checkbox.checked = false;
-    events.dispatchEvent(new CustomEvent('frame:changed', { detail: { index: this._state.activeFrameIndex } }));
+    const imageLayers = (frame.layers ?? []).filter(l => l.type === 'image');
+
+    // No image layers — toggle off silently
+    if (!imageLayers.length) {
+      frame.multi_image = false;
+      const checkbox = this._el.querySelector('#insp-canvas #insp-multi-image');
+      if (checkbox) checkbox.checked = false;
+      events.dispatchEvent(new CustomEvent('frame:changed', { detail: { index: this._state.activeFrameIndex } }));
+      return;
+    }
+
+    showMultiImageRevertModal(
+      imageLayers.map(l => ({ id: l.id, src: l.src })),
+      (selectedId, deleteUnused) => {
+        const selected = frame.layers.find(l => l.id === selectedId);
+        if (!selected) return;
+
+        // Promote selected layer to full-frame background
+        selected.position   = { zone: 'absolute', x_pct: 0, y_pct: 0 };
+        selected.width_pct  = 100;
+        selected.height_pct = 100;
+        selected.fit        = 'cover';
+
+        // Update frame background references
+        frame.image_filename = selected.src;
+        const indexEntry = (this._state.project?.image_index ?? [])
+          .find(i => i.filename === selected.src);
+        if (indexEntry) frame.image_src = indexEntry.label;
+
+        // Optionally delete unused image layers
+        if (deleteUnused) {
+          frame.layers = frame.layers.filter(l => l.type !== 'image' || l.id === selectedId);
+        }
+
+        frame.multi_image = false;
+        const checkbox = this._el.querySelector('#insp-canvas #insp-multi-image');
+        if (checkbox) checkbox.checked = false;
+        events.dispatchEvent(new CustomEvent('frame:changed', { detail: { index: this._state.activeFrameIndex } }));
+      }
+    );
   }
 }
 
