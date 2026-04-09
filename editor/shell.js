@@ -121,13 +121,36 @@ export function mountEditor(state, projectStore) {
     const brief = storage.getBrief(state.activeBriefId);
     if (!brief) return;
 
-    // Update header only when no project is loaded yet
+    // ── Restore saved project if none is loaded ──
     if (!state.project) {
-      nameEl.textContent = `${brief.title} — load JSON to begin`;
-      nameEl.classList.add('no-project');
+      let savedProject = null;
+      try {
+        savedProject = storage.getProject(state.activeBriefId);
+      } catch (e) {
+        savedProject = null;
+      }
+
+      if (savedProject) {
+        try {
+          frameManager.loadProject(savedProject);
+          await loadProjectFonts(savedProject.design_tokens);
+        } catch (e) {
+          // Stored project is corrupt — delete it and bail to manager
+          console.warn('[shell] Stored project corrupt:', e);
+          storage.deleteProject(state.activeBriefId);
+          storage.savePrefs({ ...storage.getPrefs(), lastBriefId: null });
+          _showToast('Project could not be restored — data was invalid.');
+          router.navigate('manager');
+          return;
+        }
+      } else {
+        // No saved project yet (or it was deleted) — show "load JSON to begin"
+        nameEl.textContent = `${brief.title} — load JSON to begin`;
+        nameEl.classList.add('no-project');
+      }
     }
 
-    // Collect images from both sources: brief wizard uploads + editor-loaded images
+    // ── Load images not already in state ──
     const sources = [
       ...(brief.imageMeta ?? [])
         .filter(m => m.dataUrl)
@@ -136,17 +159,26 @@ export function mountEditor(state, projectStore) {
         .map(([filename, src]) => ({ filename, src })),
     ];
 
-    // Only load images not already in state.images
     const toLoad = sources.filter(({ filename }) => !state.images.has(filename));
-    if (!toLoad.length) return;
+    if (toLoad.length) {
+      await Promise.all(toLoad.map(({ filename, src }) => new Promise(resolve => {
+        const img   = new Image();
+        img.onload  = () => { state.images.set(filename, img); resolve(); };
+        img.onerror = () => { console.warn(`[shell] Failed to load image: ${filename}`); resolve(); };
+        img.src = src;
+      })));
+      events.dispatchEvent(new CustomEvent('images:loaded'));
+    }
 
-    await Promise.all(toLoad.map(({ filename, src }) => new Promise(resolve => {
-      const img = new Image();
-      img.onload  = () => { state.images.set(filename, img); resolve(); };
-      img.onerror = () => { console.warn(`[shell] Failed to load image: ${filename}`); resolve(); };
-      img.src = src;
-    })));
-    events.dispatchEvent(new CustomEvent('images:loaded'));
+    // ── Missing images banner ──
+    if (state.project) {
+      const loaded  = state.images;
+      const indexed = (state.project.image_index ?? []).map(i => i.filename);
+      const missing = indexed.filter(fn => !loaded.has(fn));
+      if (missing.length > 0) {
+        _showBanner(root, `${missing.length} image(s) could not be restored — reload them from disk.`);
+      }
+    }
   }
   // Run immediately on mount (editor is lazy-mounted inside view:changed, so the
   // event has already fired by the time we get here)
