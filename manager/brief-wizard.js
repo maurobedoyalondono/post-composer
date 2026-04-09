@@ -301,7 +301,6 @@ export class BriefWizard {
     if (fileInput && fileInput.files && fileInput.files.length > 0) {
       imageMeta = await readFiles(fileInput.files);
     } else {
-      // Preserve existing images in edit mode; empty array for new briefs
       imageMeta = this._data.imageMeta ?? [];
     }
 
@@ -325,6 +324,29 @@ export class BriefWizard {
     };
 
     storage.saveBrief(brief);
+
+    // New brief: save empty project skeleton so the editor has something to restore.
+    // Edit brief: never overwrite an existing project.
+    if (!this._editId && !storage.getProject(brief.id)) {
+      storage.saveProject(brief.id, {
+        project:       { id: brief.id, title: brief.title },
+        design_tokens: { palette: {} },
+        export:        { width_px: 1080, height_px: 1350, format: 'png' },
+        frames:        [],
+        image_index:   [],
+      });
+    }
+
+    // Persist images to pc_images_{id} (in addition to brief.imageMeta)
+    if (imageMeta.length > 0) {
+      const imageMap = {};
+      imageMeta.forEach(m => { if (m.dataUrl) imageMap[m.filename] = m.dataUrl; });
+      const failed = storage.saveImages(brief.id, imageMap);
+      if (failed.length > 0) {
+        console.warn('[BriefWizard] Image quota exceeded for:', failed);
+      }
+    }
+
     this._dialog.close();
     this._onSave(brief);
   }
