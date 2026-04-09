@@ -192,11 +192,14 @@ export class Inspector {
       if (!val) {
         delete frame.bg_color;
         section.querySelector('#insp-bg-color').value = projectBg;
+        events.dispatchEvent(new CustomEvent('frame:changed', { detail: { index: this._state.activeFrameIndex } }));
       } else if (/^#[0-9a-fA-F]{6}$/.test(val)) {
         frame.bg_color = val;
         section.querySelector('#insp-bg-color').value = val;
+        events.dispatchEvent(new CustomEvent('frame:changed', { detail: { index: this._state.activeFrameIndex } }));
+      } else {
+        e.target.value = frame.bg_color ?? ''; // reset to last valid value
       }
-      events.dispatchEvent(new CustomEvent('frame:changed', { detail: { index: this._state.activeFrameIndex } }));
     });
 
     // multi_image toggle
@@ -216,7 +219,7 @@ export class Inspector {
   _onMultiImageToggleOff(frame) {
     // Stub — implemented in Task 7
     frame.multi_image = false;
-    const checkbox = this._el.querySelector('#insp-multi-image');
+    const checkbox = this._el.querySelector('#insp-canvas #insp-multi-image');
     if (checkbox) checkbox.checked = false;
     events.dispatchEvent(new CustomEvent('frame:changed', { detail: { index: this._state.activeFrameIndex } }));
   }
