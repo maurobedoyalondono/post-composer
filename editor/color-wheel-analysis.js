@@ -22,7 +22,8 @@ function _rgbToOklch(r, g, b) {
   const m = 0.0329845436 * X + 0.9293118715 * Y + 0.0361456387 * Z;
   const s = 0.0482003018 * X + 0.2643662691 * Y + 0.6338517070 * Z;
 
-  // Cube root
+  // Cube root — Math.cbrt handles negative values correctly (unlike Math.pow(x, 1/3)).
+  // For sRGB gamut inputs, l/m/s are always non-negative, but Math.cbrt is safe either way.
   const l_ = Math.cbrt(l), m_ = Math.cbrt(m), s_ = Math.cbrt(s);
 
   // LMS → OKLAB (M2)
@@ -77,7 +78,10 @@ function _hueDeg(h1, h2) {
 
 // ─── K-means in OKLCH ──────────────────────────────────────────────────────
 
-// Perceptual distance: chroma-weighted hue + lightness component
+// Perceptual distance: chroma-weighted hue + lightness component.
+// Near-neutral samples (C near 0) collapse hue weight toward 0, which means
+// very desaturated samples of different hues are treated as similar. This is
+// intentional — for near-neutral pixels, hue is unreliable and lightness dominates.
 function _oklchDist(a, b) {
   const hd = (_hueDeg(a.h, b.h) / 180) * (Math.min(a.C, b.C) / 0.4);
   const ld = Math.abs(a.L - b.L);
@@ -369,6 +373,8 @@ function _colorName(hue) {
 
 function _describeHues(chromatic) {
   if (!chromatic.length) return '';
+  // chromatic is pre-sorted by canvasPct descending (from extractDominantColors),
+  // so chromatic[0] is the dominant chromatic color.
   const h = chromatic[0].oklch.h;
   if (h < 60 || h >= 345)  return 'Your composition leans warm (red/orange).';
   if (h < 105) return 'Your composition leans warm (yellow/green).';
@@ -398,6 +404,8 @@ function _suggestion(best, chromatic, neutralPct) {
 /**
  * Build an RGBA overlay that tints affecting pixels red.
  * Uses OKLCH C < 0.04 for neutral detection (replaces HSL s < 10).
+ * Note: runs _rgbToOklch on every pixel — more expensive than the old HSL path.
+ * For large canvases, consider running this in a Worker if main-thread jank occurs.
  * @param {ImageData} imageData
  * @param {Array<{centerHue:number, halfWidth:number}>} sectors
  * @returns {Uint8ClampedArray}
