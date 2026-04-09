@@ -289,6 +289,11 @@ describe('validator — frame multi_image and bg_color', () => {
     assert(!validate(p).valid);
   });
 
+  it('still requires image_src when multi_image is explicitly false', () => {
+    const p = frameProject({ multi_image: false, image_src: undefined });
+    assert(!validate(p).valid);
+  });
+
   it('still requires image_filename when multi_image is false', () => {
     const p = frameProject({ image_filename: undefined });
     assert(!validate(p).valid);
