@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>post-composer agent preview</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; background: #111; display: flex; align-items: center; justify-content: center; }
+    canvas { display: block; max-width: 100vw; max-height: 100vh; }
+  </style>
+</head>
+<body data-status="loading">
+<canvas id="preview-canvas"></canvas>
+<script type="module">
+import { renderer }         from './editor/renderer.js';
+import { loadProjectFonts } from './shared/fonts.js';
+
+const params   = new URLSearchParams(location.search);
+const jsonPath = params.get('json');
+const frameId  = params.get('frame');
+
+if (!jsonPath || !frameId) {
+  document.body.dataset.status = 'error';
+  throw new Error('agent-preview: ?json= and ?frame= are required');
+}
+
+const canvas  = document.getElementById('preview-canvas');
+const jsonBase = jsonPath.substring(0, jsonPath.lastIndexOf('/') + 1);
+
+async function loadImage(filename) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload  = () => resolve([filename, img]);
+    img.onerror = () => { console.warn(`[preview] Image not found: ${filename}`); resolve([filename, null]); };
+    img.src = jsonBase + filename;
+  });
+}
+
+async function init() {
+  const res     = await fetch(jsonPath);
+  const project = await res.json();
+
+  const frame = project.frames.find(f => f.id === frameId);
+  if (!frame) throw new Error(`[preview] Frame not found: ${frameId}`);
+
+  await loadProjectFonts(project.design_tokens);
+
+  const filenames = new Set();
+  if (project.image_index) project.image_index.forEach(e => filenames.add(e.filename));
+  project.frames.forEach(f => {
+    if (f.image_filename) filenames.add(f.image_filename);
+    (f.layers ?? []).forEach(l => { if (l.type === 'image' && l.src) filenames.add(l.src); });
+  });
+
+  const pairs  = await Promise.all([...filenames].map(loadImage));
+  const images = new Map(pairs.filter(([, img]) => img !== null));
+
+  canvas.width  = project.export.width_px;
+  canvas.height = project.export.height_px;
+
+  renderer.renderFrame(canvas, frame, project, images, {});
+
+  // Store for renderFrame hook
+  window.__project = project;
+  window.__images  = images;
+
+  document.body.dataset.status = 'ready';
+}
+
+window.renderFrame = async (updatedFrame) => {
+  document.body.dataset.status = 'rendering';
+  if (window.__project) {
+    const idx = window.__project.frames.findIndex(f => f.id === updatedFrame.id);
+    if (idx !== -1) window.__project.frames[idx] = updatedFrame;
+  }
+  renderer.renderFrame(canvas, updatedFrame, window.__project, window.__images, {});
+  document.body.dataset.status = 'ready';
+};
+
+init().catch(err => {
+  console.error('[preview]', err);
+  document.body.dataset.status = 'error';
+});
+</script>
+</body>
+</html>
