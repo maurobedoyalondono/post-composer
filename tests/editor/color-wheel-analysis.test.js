@@ -173,3 +173,52 @@ describe('computeAllHarmonyScores', () => {
     });
   });
 });
+
+import { computeAffectingOverlay } from '../../editor/color-wheel-analysis.js';
+
+describe('computeAffectingOverlay', () => {
+  it('returns Uint8ClampedArray with same length as input data', () => {
+    const data = new Uint8ClampedArray([255, 0, 0, 255, 0, 0, 255, 255]);
+    const imageData = new ImageData(data, 2, 1);
+    const sectors = [{ centerHue: 0, halfWidth: 30 }];
+    const out = computeAffectingOverlay(imageData, sectors);
+    assert(out instanceof Uint8ClampedArray, 'should be Uint8ClampedArray');
+    assertEqual(out.length, data.length, 'output length should match input');
+  });
+
+  it('pixel in harmony zone → copied unchanged', () => {
+    // Pure red (hue ≈ 0°) with sector centerHue=0, halfWidth=30
+    const data = new Uint8ClampedArray([255, 0, 0, 255]);
+    const imageData = new ImageData(data, 1, 1);
+    const sectors = [{ centerHue: 0, halfWidth: 30 }];
+    const out = computeAffectingOverlay(imageData, sectors);
+    assertEqual(out[0], 255, 'R should be 255 (original)');
+    assertEqual(out[1], 0,   'G should be 0 (original)');
+    assertEqual(out[2], 0,   'B should be 0 (original)');
+    assertEqual(out[3], 255, 'A should be 255 (original)');
+  });
+
+  it('pixel outside harmony zone → red tint rgba(239,68,68,128)', () => {
+    // Pure green (hue ≈ 120°) with sector only at hue 0°
+    const data = new Uint8ClampedArray([0, 255, 0, 255]);
+    const imageData = new ImageData(data, 1, 1);
+    const sectors = [{ centerHue: 0, halfWidth: 30 }];
+    const out = computeAffectingOverlay(imageData, sectors);
+    assertEqual(out[0], 239, 'R should be 239 (red tint)');
+    assertEqual(out[1], 68,  'G should be 68 (red tint)');
+    assertEqual(out[2], 68,  'B should be 68 (red tint)');
+    assertEqual(out[3], 128, 'A should be 128 (50% opacity)');
+  });
+
+  it('neutral pixel (s<10) → copied unchanged regardless of sectors', () => {
+    // Pure white (s=0) with no harmonic sector
+    const data = new Uint8ClampedArray([255, 255, 255, 255]);
+    const imageData = new ImageData(data, 1, 1);
+    const sectors = [{ centerHue: 120, halfWidth: 30 }];
+    const out = computeAffectingOverlay(imageData, sectors);
+    assertEqual(out[0], 255, 'neutral pixel R unchanged');
+    assertEqual(out[1], 255, 'neutral pixel G unchanged');
+    assertEqual(out[2], 255, 'neutral pixel B unchanged');
+    assertEqual(out[3], 255, 'neutral pixel A unchanged');
+  });
+});

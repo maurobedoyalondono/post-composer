@@ -262,3 +262,32 @@ export function computeAllHarmonyScores(dominantColors) {
     })
     .sort((a, b) => b.score - a.score);
 }
+
+// ─── computeAffectingOverlay ───────────────────────────────────────────────
+
+/**
+ * Build an RGBA overlay that tints affecting pixels red.
+ * In-harmony and neutral pixels are copied unchanged.
+ * @param {ImageData} imageData — the full canvas image data
+ * @param {Array<{centerHue:number, halfWidth:number}>} sectors — from active HarmonyResult
+ * @returns {Uint8ClampedArray}
+ */
+export function computeAffectingOverlay(imageData, sectors) {
+  const { data } = imageData;
+  const n = data.length / 4;
+  const out = new Uint8ClampedArray(data.length);
+
+  for (let i = 0; i < n; i++) {
+    const r = data[i * 4], g = data[i * 4 + 1], b = data[i * 4 + 2], a = data[i * 4 + 3];
+    const { s, h } = _rgbToHsl(r, g, b);
+
+    if (s < 10 || _inSectors(h, sectors)) {
+      // Neutral or in-harmony — copy original pixel
+      out[i * 4] = r; out[i * 4 + 1] = g; out[i * 4 + 2] = b; out[i * 4 + 3] = a;
+    } else {
+      // Affecting — red tint at 50% opacity
+      out[i * 4] = 239; out[i * 4 + 1] = 68; out[i * 4 + 2] = 68; out[i * 4 + 3] = 128;
+    }
+  }
+  return out;
+}
