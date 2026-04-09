@@ -491,3 +491,136 @@ Non-negotiable series constraints. Run the full checklist (Section 8) before out
 5. **Composition patterns:** No single pattern on more than 40% of frames.
 6. **Copy tone:** Not all text frames use the same register. Mix factual-label, direct address, poetic fragment, interrogative.
 7. **Silence pacing:** Silent frames match the `silence_map` declared in the variety contract. No surprise silences.
+
+---
+
+## Section 5 — Typography Rules
+
+- `display` family — headlines and display text only. Never for numbers or measurements.
+- `body` family — captions, eyebrows, supporting text. Light weight (400) by default.
+- `data` family — all numeric content. Bold (700). Never use a serif or display face for numbers.
+
+**Letter spacing:**
+- Display text: slight tightening, `-0.02` to `-0.03` em. Large text at normal spacing feels loose.
+- Body text: `0` to `0.05` em. Neutral.
+- Eyebrows and labels in all-caps: wide spacing, `0.1` to `0.2` em. All-caps text needs room.
+
+**Line height:**
+- Display: `0.95` to `1.1`. Headlines stack tightly.
+- Body: `1.4` to `1.6`. Reading text needs breathing room.
+
+**Alignment:**
+- Left for edge-anchored designs (`editorial-anchor`, `minimal-strip`, `data-callout`).
+- Center for symmetric patterns (`centered-monument`).
+- Match the frame's compositional axis.
+
+**Text shadow:** Use only when text must cross a high-contrast, busy area where overlay is not possible. Keep `blur_px` high (10–16), `opacity` moderate (0.4–0.6). Never a hard shadow.
+
+---
+
+## Section 6 — Overlay Rules
+
+Run this decision tree before setting any overlay value:
+
+```
+Does any text in this frame need legibility help against the photograph?
+  No
+    → omit the overlay entirely
+    → an overlay that darkens without serving text is a mistake, not a default
+  Yes — look at the pixels at the text zone:
+    Smooth tonal transition (sky, soft blur, gradual shadow)
+      → gradient in the direction of text
+      → set from_opacity to 0, to_opacity to the minimum the image requires
+      → look at the actual pixels — do not copy the draft number
+    Noisy, textured, patterned, or color-conflicted
+      → solid overlay (gradient: { enabled: false })
+      → text reads against a flat surface regardless of what the photo does underneath
+    Naturally dark, uniform zone (deep shadow, dark wall, night sky)
+      → no treatment needed — the image provides the contrast
+```
+
+**Opacity:** Always the minimum needed. An overlay that obscures 60% of the photo when 30% would have been enough is not neutral — it changes the image.
+
+**blend_mode: "multiply":** Creates a duotone effect — the overlay color tints the image through multiplication. Use when the creative brief calls for a specific tonal cast, not as a darkening shortcut.
+
+**gradient.stops:** Include explicit stop colors matching the overlay `color` at full and zero opacity. This ensures consistent rendering across all canvas sizes.
+
+---
+
+## Section 7 — Layout Rules
+
+### Zone anchor system
+
+All positions use zone anchors with percentage offsets. This is the only position model — no raw x_pct/y_pct except with `zone: "absolute"`.
+
+```json
+"position": {
+  "zone": "bottom-left",
+  "offset_x_pct": 6,
+  "offset_y_pct": -12
+}
+```
+
+**Zone names:** `top-left`, `top-center`, `top-right`, `middle-left`, `middle-center`, `middle-right`, `bottom-left`, `bottom-center`, `bottom-right`.
+
+**Offset direction:**
+- Bottom zones: negative `offset_y_pct` moves UP (toward center). `-12` means 12% of canvas height above the bottom edge.
+- Top zones: positive `offset_y_pct` moves DOWN.
+- Left zones: positive `offset_x_pct` moves RIGHT.
+- Right zones: negative `offset_x_pct` moves LEFT (toward center).
+
+**Absolute placement** (rare — for image layers in multi_image mode, or precise geometric positioning):
+```json
+"position": { "zone": "absolute", "x_pct": 52, "y_pct": 20 }
+```
+x_pct 0=left edge, 100=right edge. y_pct 0=top edge, 100=bottom edge.
+
+### Stacking math
+
+For a vertical text stack, compute vertical space from the bottom up:
+- Layer height ≈ `(size_pct / 100 × canvas_height) × line_height × line_count`
+- Add 1–2% of canvas height between stacked elements for breathing room
+
+Example for a bottom-left stack (caption → headline → eyebrow, reading bottom to top):
+- caption at `offset_y_pct: -6` (6% above bottom)
+- headline at `offset_y_pct: -12` (12% above bottom — enough for the caption)
+- eyebrow at `offset_y_pct: -18` (above the headline)
+
+### Safe zone
+
+Keep all text and graphic elements within the inner 80% of the canvas (10% margin on each side) unless the design explicitly breaks this boundary for compositional effect.
+
+### Layer ordering
+
+Layers render bottom-to-top in the array. Standard order:
+1. Image layer (if multi_image)
+2. Overlay
+3. Shapes
+4. Text (body/eyebrow)
+5. Text (display/headline)
+6. Text (data/stat)
+
+A shape that sits behind text must appear earlier in the array.
+
+---
+
+## Section 8 — Pre-Output Checklist
+
+Run before outputting any JSON. Fix every failure. Never flag and defer.
+
+```
+□ composition_pattern present and valid on every frame
+□ No zone used on > 40% of text frames — count and verify
+□ Shape quota: 1 shape per 3 frames minimum, or waiver documented in variety contract
+□ At least 2 different overlay strategies across the series
+□ Accent color on ≥ 2 frames, or exclusion documented
+□ Pattern distribution: no single pattern on > 40% of frames
+□ silence_map frames have no text layers, no overlays, no shapes (layers: [])
+□ image_filename present on every frame — from image-map.md, not invented
+□ data font role used for all numeric content — no display/serif family for numbers
+□ role field present on every shape layer
+□ All positions use zone-anchor model — no bare x_pct/y_pct except zone: "absolute"
+□ multi_image frames: bg_color set if image layers don't cover the full canvas
+□ globals.google_fonts populated from design_tokens font families
+□ max_width_pct set on every text layer
+```
