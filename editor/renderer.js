@@ -1,5 +1,5 @@
 // editor/renderer.js
-import { renderLayer, computeLayerBounds } from './layers.js';
+import { renderLayer, computeLayerBounds, computeTextSelectionBounds } from './layers.js';
 import {
   computeContrastMap, computeWeightMap,
   computeCenterOfMass, drawCenterOfMass,
@@ -82,9 +82,9 @@ function _drawCoverImage(ctx, img, w, h) {
 function _drawSafeZone(ctx, w, h) {
   const m = 0.1;
   ctx.save();
-  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-  ctx.lineWidth   = 1;
-  ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = 'rgba(252, 211, 77, 0.9)';
+  ctx.lineWidth   = 2;
+  ctx.setLineDash([8, 6]);
   ctx.strokeRect(w * m, h * m, w * (1 - 2 * m), h * (1 - 2 * m));
   ctx.restore();
 }
@@ -105,7 +105,9 @@ function _drawAllBounds(ctx, layers, w, h) {
 }
 
 function _drawSelection(ctx, layer, w, h) {
-  const b = computeLayerBounds(layer, w, h);
+  const b = layer.type === 'text'
+    ? computeTextSelectionBounds(ctx, layer, w, h)
+    : computeLayerBounds(layer, w, h);
   if (b.width === 0 && b.height === 0) return;
   ctx.save();
   ctx.strokeStyle = 'rgba(100,160,255,0.9)';
@@ -128,8 +130,8 @@ function _drawSelection(ctx, layer, w, h) {
 
 function _drawGuide(ctx, w, h, guideType) {
   ctx.save();
-  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-  ctx.lineWidth   = 1;
+  ctx.strokeStyle = 'rgba(252, 211, 77, 0.85)';
+  ctx.lineWidth   = 1.5;
   ctx.setLineDash([]);
 
   const line = (x0, y0, x1, y1) => {

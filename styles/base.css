@@ -20,9 +20,12 @@
   --radius-lg: 12px;
 }
 
-html, body { height: 100%; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); font-size: 14px; }
+html, body { height: 100%; overflow: hidden; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); font-size: 14px; }
 
 #app { height: 100%; display: flex; flex-direction: column; }
 
 #manager-view,
 #editor-view { flex: 1; display: flex; flex-direction: column; }
+
+/* Ensure [hidden] always wins, even when a display rule is set above */
+[hidden] { display: none !important; }

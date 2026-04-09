@@ -1,0 +1,312 @@
+{
+  "project": {
+    "id": "canyon-series-2026",
+    "title": "Canyon Series 2026"
+  },
+  "export": {
+    "target": "instagram-portrait",
+    "width_px": 1080,
+    "height_px": 1350
+  },
+  "design_tokens": {
+    "palette": {
+      "background": "#1a1a2e",
+      "primary":    "#E0D8CE",
+      "accent":     "#B85530",
+      "neutral":    "#5C6B74"
+    },
+    "type_scale": {
+      "display": {
+        "family": "Cormorant Garamond",
+        "weight": 700,
+        "steps": { "xl": 12, "lg": 10, "md": 8, "sm": 6 }
+      },
+      "body": {
+        "family": "Inter",
+        "weight": 400,
+        "steps": { "md": 3.5, "sm": 3.0, "xs": 2.5 }
+      },
+      "data": {
+        "family": "Inter",
+        "weight": 700,
+        "steps": { "xl": 16, "lg": 12, "md": 8, "sm": 5 }
+      }
+    },
+    "spacing_scale": [4, 6, 8, 12, 16, 24]
+  },
+  "variety_contract": {
+    "zone_max_usage_pct": 40,
+    "shape_quota": {
+      "min_per_n_frames": 3,
+      "waiver": null
+    },
+    "overlay_strategies": ["gradient", "solid-bar"],
+    "overlay_strategies_min": 2,
+    "accent_color_frames": ["frame-03"],
+    "accent_color_min": 1,
+    "copy_tone_variety": true,
+    "silence_map": [2],
+    "composition_patterns": {
+      "frame-01": "editorial-anchor",
+      "frame-02": "full-bleed",
+      "frame-03": "data-callout",
+      "frame-04": "minimal-strip"
+    }
+  },
+  "globals": {
+    "google_fonts": [
+      "Cormorant+Garamond:wght@700",
+      "Inter:wght@400;700"
+    ]
+  },
+  "image_index": [
+    { "label": "wide-canyon-overview",       "filename": "CC2A1369.jpg" },
+    { "label": "eroded-channels-closeup",    "filename": "CC2A1463.jpg" },
+    { "label": "golden-hour-canyon-walls",   "filename": "CC2A1495.jpg" },
+    { "label": "shadow-geometry-ridgeline",  "filename": "CC2A1512.jpg" }
+  ],
+  "frames": [
+    {
+      "id": "frame-01",
+      "image_src": "wide-canyon-overview",
+      "image_filename": "CC2A1369.jpg",
+      "composition_pattern": "editorial-anchor",
+      "layers": [
+        {
+          "id": "f01-overlay",
+          "type": "overlay",
+          "opacity": 0.6,
+          "color": "#1a1a2e",
+          "blend_mode": "normal",
+          "gradient": {
+            "enabled": true,
+            "direction": "to-bottom",
+            "from_opacity": 0,
+            "from_pos": 0,
+            "to_opacity": 100,
+            "to_pos": 100,
+            "stops": [
+              { "at": 0, "color": "rgba(26,26,46,0)" },
+              { "at": 1, "color": "rgba(26,26,46,1)" }
+            ]
+          }
+        },
+        {
+          "id": "f01-divider",
+          "type": "shape",
+          "shape": "rect",
+          "role": "divider",
+          "fill": "#B85530",
+          "opacity": 1,
+          "position": {
+            "zone": "bottom-left",
+            "offset_x_pct": 6,
+            "offset_y_pct": -18
+          },
+          "width_pct": 8,
+          "height_pct": 0.4
+        },
+        {
+          "id": "f01-eyebrow",
+          "type": "text",
+          "content": "AMERICAN SOUTHWEST",
+          "font": {
+            "family": "Inter",
+            "weight": 400,
+            "style": "normal",
+            "size_pct": 2.2,
+            "color": "#B85530",
+            "line_height": 1.2,
+            "letter_spacing_em": 0.15,
+            "align": "left"
+          },
+          "max_width_pct": 80,
+          "position": {
+            "zone": "bottom-left",
+            "offset_x_pct": 6,
+            "offset_y_pct": -15
+          }
+        },
+        {
+          "id": "f01-headline",
+          "type": "text",
+          "content": "Canyon Series",
+          "font": {
+            "family": "Cormorant Garamond",
+            "weight": 700,
+            "style": "normal",
+            "size_pct": 10,
+            "color": "#E0D8CE",
+            "line_height": 1.0,
+            "letter_spacing_em": -0.02,
+            "align": "left"
+          },
+          "max_width_pct": 75,
+          "position": {
+            "zone": "bottom-left",
+            "offset_x_pct": 6,
+            "offset_y_pct": -12
+          }
+        },
+        {
+          "id": "f01-caption",
+          "type": "text",
+          "content": "Light, shadow, and geological time.",
+          "font": {
+            "family": "Inter",
+            "weight": 400,
+            "style": "normal",
+            "size_pct": 2.8,
+            "color": "#5C6B74",
+            "line_height": 1.5,
+            "letter_spacing_em": 0,
+            "align": "left"
+          },
+          "max_width_pct": 70,
+          "position": {
+            "zone": "bottom-center",
+            "offset_x_pct": -35,
+            "offset_y_pct": -6
+          }
+        }
+      ]
+    },
+    {
+      "id": "frame-02",
+      "image_src": "eroded-channels-closeup",
+      "image_filename": "CC2A1463.jpg",
+      "composition_pattern": "full-bleed",
+      "layers": []
+    },
+    {
+      "id": "frame-03",
+      "image_src": "golden-hour-canyon-walls",
+      "image_filename": "CC2A1495.jpg",
+      "composition_pattern": "data-callout",
+      "layers": [
+        {
+          "id": "f03-overlay",
+          "type": "overlay",
+          "opacity": 0.45,
+          "color": "#1a1a2e",
+          "blend_mode": "multiply",
+          "gradient": {
+            "enabled": false
+          }
+        },
+        {
+          "id": "f03-watermark",
+          "type": "image",
+          "src": "CC2A1369.jpg",
+          "fit": "contain",
+          "opacity": 0.2,
+          "width_pct": 15,
+          "height_pct": 10,
+          "position": {
+            "zone": "bottom-right",
+            "offset_x_pct": -8,
+            "offset_y_pct": -8
+          }
+        },
+        {
+          "id": "f03-stat-value",
+          "type": "text",
+          "content": "300M",
+          "font": {
+            "family": "Inter",
+            "weight": 700,
+            "style": "normal",
+            "size_pct": 18,
+            "color": "#B85530",
+            "line_height": 1.0,
+            "letter_spacing_em": -0.03,
+            "align": "left"
+          },
+          "max_width_pct": 80,
+          "position": {
+            "zone": "top-right",
+            "offset_x_pct": -60,
+            "offset_y_pct": 12
+          }
+        },
+        {
+          "id": "f03-stat-label",
+          "type": "text",
+          "content": "years of geological history\nexposed in these walls",
+          "font": {
+            "family": "Inter",
+            "weight": 400,
+            "style": "italic",
+            "size_pct": 3.0,
+            "color": "#E0D8CE",
+            "line_height": 1.5,
+            "letter_spacing_em": 0,
+            "align": "left"
+          },
+          "max_width_pct": 55,
+          "position": {
+            "zone": "top-right",
+            "offset_x_pct": -60,
+            "offset_y_pct": 32
+          }
+        }
+      ]
+    },
+    {
+      "id": "frame-04",
+      "image_src": "shadow-geometry-ridgeline",
+      "image_filename": "CC2A1512.jpg",
+      "composition_pattern": "minimal-strip",
+      "layers": [
+        {
+          "id": "f04-overlay",
+          "type": "overlay",
+          "opacity": 0.7,
+          "color": "#1a1a2e",
+          "blend_mode": "normal",
+          "gradient": {
+            "enabled": true,
+            "direction": "to-bottom",
+            "from_opacity": 0,
+            "from_pos": 0,
+            "to_opacity": 100,
+            "to_pos": 100,
+            "stops": [
+              { "at": 0, "color": "rgba(26,26,46,0)" },
+              { "at": 1, "color": "rgba(26,26,46,1)" }
+            ]
+          }
+        },
+        {
+          "id": "f04-text",
+          "type": "text",
+          "content": "Where light becomes architecture.",
+          "font": {
+            "family": "Cormorant Garamond",
+            "weight": 700,
+            "style": "normal",
+            "size_pct": 5.5,
+            "color": "#E0D8CE",
+            "line_height": 1.2,
+            "letter_spacing_em": 0,
+            "align": "center"
+          },
+          "max_width_pct": 70,
+          "shadow": {
+            "enabled": true,
+            "color": "#000000",
+            "blur_px": 12,
+            "offset_x": 1,
+            "offset_y": 2,
+            "opacity": 0.7
+          },
+          "position": {
+            "zone": "bottom-center",
+            "offset_x_pct": -35,
+            "offset_y_pct": -8
+          }
+        }
+      ]
+    }
+  ]
+}

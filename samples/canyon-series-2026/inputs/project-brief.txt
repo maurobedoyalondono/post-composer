@@ -1,0 +1,49 @@
+PROJECT BRIEF — Canyon Series 2026
+===================================
+
+Title:      Canyon Series 2026
+Platform:   Instagram Portrait (1080 × 1350 px)
+Tone:       Editorial
+Series:     4 frames
+
+SUBJECT
+-------
+Canyon landscape photography from the American Southwest. The series
+explores how light and shadow reveal geological time — layered rock,
+eroded channels, and ridgeline geometry at the edge of day.
+
+NARRATIVE ARC
+-------------
+Frame 1 (editorial-anchor): Wide opening frame establishes the series
+  identity with strong editorial typography over a gradient overlay.
+  "Canyon Series" headline anchors the bottom-left zone.
+
+Frame 2 (full-bleed, silent): The photograph speaks alone. No text, no
+  overlay. Lets eroded rock channels breathe without interruption.
+  Silence map position: [2].
+
+Frame 3 (data-callout): A bold geological stat — "300M years of
+  geological history" — positions the series in deep time. Solid overlay
+  at 45% opacity. Accent color headline (#B85530).
+
+Frame 4 (minimal-strip): Closing frame with a single poetic line over a
+  gradient. "Where light becomes architecture." Cormorant Garamond,
+  bottom-center.
+
+DESIGN TOKENS
+-------------
+Background:  #1a1a2e  (deep navy)
+Primary:     #E0D8CE  (warm stone)
+Accent:      #B85530  (burnt sienna)
+Neutral:     #5C6B74  (slate grey)
+
+Display font:  Cormorant Garamond 700
+Body font:     Inter 400 / 700
+
+VARIETY CONTRACT
+----------------
+zone_max_usage_pct:   40%
+shape_quota:          1 shape per 3 frames (no waiver)
+overlay_strategies:   gradient + solid-bar (min 2)
+accent_color_frames:  [frame-03]
+silence_map:          [2]

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Seed Sample Data</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0d0f1a; color: #e2e8f0; padding: 40px; max-width: 600px; margin: 0 auto; }
+    h1 { color: #a5b4fc; margin-bottom: 8px; }
+    p { color: #6b7280; margin-bottom: 24px; }
+    button { background: #6366f1; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 15px; cursor: pointer; margin-right: 12px; }
+    button:hover { background: #4f46e5; }
+    button.danger { background: #ef4444; }
+    button.danger:hover { background: #dc2626; }
+    .status { margin-top: 20px; padding: 12px 16px; border-radius: 8px; display: none; }
+    .status.ok { background: #064e3b; color: #6ee7b7; display: block; }
+    .status.err { background: #7f1d1d; color: #fca5a5; display: block; }
+    code { font-family: monospace; font-size: 13px; background: #1a1f2e; padding: 2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Post-Composer — Sample Data Seeder</h1>
+  <p>Seeds localStorage with a sample project brief so the Project Manager shows a card. Open this file via a local web server, then navigate to <code>index.html</code>.</p>
+
+  <button id="btn-seed">Seed Sample Brief</button>
+  <button id="btn-clear" class="danger">Clear All Data</button>
+
+  <div id="status" class="status"></div>
+
+  <script>
+    const BRIEF_INDEX_KEY = 'pc_briefs';
+    const BRIEF_KEY = id => `pc_brief_${id}`;
+
+    const sampleBrief = {
+      id: 'canyon-series-2026',
+      title: 'Canyon Series 2026',
+      platform: 'instagram-portrait',
+      tone: 'editorial',
+      subject: 'Canyon landscape photography from the American Southwest — light, shadow, and geological formations.',
+      story: 'A 4-frame editorial series exploring how light and shadow interact with ancient canyon geology. Frame 1 anchors the series with a wide overview and strong typography. Frame 2 lets the eroded channels speak without text. Frame 3 delivers a geological data callout. Frame 4 closes with a poetic minimal quote.',
+      imageMeta: [
+        { label: 'wide-canyon-overview',      filename: 'CC2A1369.jpg' },
+        { label: 'eroded-channels-closeup',   filename: 'CC2A1463.jpg' },
+        { label: 'golden-hour-canyon-walls',  filename: 'CC2A1495.jpg' },
+        { label: 'shadow-geometry-ridgeline', filename: 'CC2A1512.jpg' },
+      ],
+      createdAt: Date.now() - 86400000,
+      updatedAt: Date.now(),
+    };
+
+    const sampleIndex = {
+      id: sampleBrief.id,
+      title: sampleBrief.title,
+      platform: sampleBrief.platform,
+      tone: sampleBrief.tone,
+      imageCount: sampleBrief.imageMeta.length,
+      updatedAt: sampleBrief.updatedAt,
+    };
+
+    document.getElementById('btn-seed').addEventListener('click', () => {
+      const status = document.getElementById('status');
+      try {
+        // Write full brief
+        localStorage.setItem(BRIEF_KEY(sampleBrief.id), JSON.stringify(sampleBrief));
+
+        // Merge into index (avoid duplicates)
+        const raw = localStorage.getItem(BRIEF_INDEX_KEY);
+        const index = raw ? JSON.parse(raw) : [];
+        const existing = index.findIndex(b => b.id === sampleBrief.id);
+        if (existing >= 0) index[existing] = sampleIndex;
+        else index.push(sampleIndex);
+        localStorage.setItem(BRIEF_INDEX_KEY, JSON.stringify(index));
+
+        status.className = 'status ok';
+        status.textContent = 'Sample brief seeded. Open index.html — you should see "Canyon Series 2026" in the project list.';
+      } catch (e) {
+        status.className = 'status err';
+        status.textContent = 'Error: ' + e.message;
+      }
+    });
+
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      const status = document.getElementById('status');
+      const keys = Object.keys(localStorage).filter(k => k.startsWith('pc_'));
+      keys.forEach(k => localStorage.removeItem(k));
+      status.className = 'status ok';
+      status.textContent = `Cleared ${keys.length} key(s): ${keys.join(', ') || 'none'}.`;
+    });
+  </script>
+</body>
+</html>

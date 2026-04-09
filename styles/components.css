@@ -283,7 +283,9 @@
   font-size: 12px;
   font-family: var(--font-sans);
   padding: 3px 6px;
-  width: 70px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .insp-layer-controls input[type="color"] {
@@ -719,4 +721,98 @@
 .cp-tone-base {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 2px var(--color-accent);
+}
+
+/* ── Toolbar 4-column grid ───────────────────── */
+.tb-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px 4px;
+  width: 100%;
+  padding: 4px 0;
+}
+
+/* A single labeled control cell */
+.ctrl {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ctrl-label {
+  font-size: 9px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Inputs inside a ctrl fill their grid cell */
+.ctrl input[type="number"],
+.ctrl input[type="text"],
+.ctrl select,
+.ctrl textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.ctrl textarea {
+  resize: none;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  padding: 4px 6px;
+}
+
+.ctrl .btn {
+  width: 100%;
+}
+
+/* Column spans */
+.tb-span-2 { grid-column: span 2; }
+.tb-span-3 { grid-column: span 3; }
+.tb-span-4 { grid-column: span 4; }
+
+/* Button group — fills its ctrl cell horizontally */
+.tb-btn-group {
+  display: flex;
+  gap: 2px;
+  width: 100%;
+}
+
+.tb-btn-group .btn {
+  flex: 1;
+  min-width: 0;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+/* Action row — always spans full width, sits at grid bottom */
+.tb-actions {
+  grid-column: span 4;
+  display: flex;
+  gap: 4px;
+  border-top: 1px solid var(--color-border);
+  padding-top: 4px;
+}
+
+.tb-actions .btn {
+  flex: 1;
+}
+
+.tb-danger {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.tb-danger:hover {
+  background: rgba(239,68,68,0.15);
 }

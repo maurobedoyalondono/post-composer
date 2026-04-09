@@ -56,6 +56,38 @@ export function computeTextBounds(ctx, layer, w, h) {
 }
 
 /**
+ * Compute tight selection bounds for a text layer by measuring actual rendered text.
+ * Width reflects the widest line; height reflects the true line count.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {object} layer
+ * @param {number} w — canvas width
+ * @param {number} h — canvas height
+ * @returns {{ x: number, y: number, width: number, height: number }}
+ */
+export function computeTextSelectionBounds(ctx, layer, w, h) {
+  const { x, y } = resolvePosition(layer.position, w, h);
+  const sizePx  = (layer.font?.size_pct ?? 5) / 100 * h;
+  const maxW    = (layer.max_width_pct ?? 80) / 100 * w;
+  const spacing = (layer.font?.letter_spacing_em ?? 0) * sizePx;
+  ctx.save();
+  ctx.font = buildFontString(layer.font ?? {}, sizePx);
+  const lines = _wrapText(ctx, layer.content ?? '', maxW);
+  const lineH = sizePx * (layer.font?.line_height ?? 1.25);
+  let actualW = 0;
+  for (const line of lines) {
+    const lw = ctx.measureText(line).width + Math.max(0, line.length - 1) * spacing;
+    if (lw > actualW) actualW = lw;
+  }
+  ctx.restore();
+  return {
+    x,
+    y,
+    width:  Math.min(actualW || maxW, maxW),
+    height: Math.max(lines.length, 1) * lineH,
+  };
+}
+
+/**
  * Compute the bounding box of a layer in canvas coordinates.
  * Does not require a canvas context — text height is approximated as 2 lines.
  * @param {object} layer

@@ -11,6 +11,7 @@ export class AppState {
     this.selectedLayerId  = null;
     this.analysisMode     = null;       // null | 'heatmap' | 'zones' | 'contrast' | 'weight'
     this.prefs            = { guideType: null, showSafeZone: false, showLayerBounds: false };
+    this.activeBriefId    = null;       // brief id to open when navigating to editor
   }
 
   /** @param {'manager'|'editor'} view */

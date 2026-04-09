@@ -25,12 +25,19 @@ export class ImageTray {
     }
     this._el.innerHTML = `<div class="image-tray-grid">
       ${Array.from(images.entries()).map(([key, img]) => `
-        <div class="image-tray-cell" title="${_esc(key)}">
-          <img src="${/^blob:/.test(img.src) ? _esc(img.src) : ''}" alt="${_esc(_basename(key))}">
+        <div class="image-tray-cell" title="Drag to canvas — ${_esc(key)}" draggable="true" data-filename="${_esc(key)}">
+          <img src="${/^(blob:|data:image\/)/.test(img.src) ? _esc(img.src) : ''}" alt="${_esc(_basename(key))}">
           <span class="image-tray-label">${_esc(_basename(key))}</span>
         </div>
       `).join('')}
     </div>`;
+
+    this._el.querySelectorAll('.image-tray-cell[draggable]').forEach(cell => {
+      cell.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', cell.dataset.filename);
+        e.dataTransfer.effectAllowed = 'copy';
+      });
+    });
   }
 }
 

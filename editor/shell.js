@@ -233,16 +233,25 @@ export function mountEditor(state) {
     layersPanelBtn.textContent = isOpen ? 'Layers ▼' : 'Layers ▲';
   });
 
-  // ── Canvas: click-to-probe (right-click or Escape to dismiss) ─
+  // ── Canvas: click-to-probe (disabled by default, toggled via view strip) ─
   let probePopover = null;
+  let probeActive  = false;
   const _dismissProbe = () => {
     if (probePopover) { probePopover.remove(); probePopover = null; }
   };
 
+  const probeBtn = root.querySelector('#btn-probe');
+  probeBtn.addEventListener('click', () => {
+    probeActive = !probeActive;
+    probeBtn.setAttribute('aria-pressed', probeActive);
+    if (!probeActive) _dismissProbe();
+  });
+
   canvasEl.addEventListener('click', e => {
     if (!state.project || !state.activeFrame) return;
+    if (!probeActive) return;
 
-    // Right-click or clicking an existing popover dismisses it
+    // Clicking an existing popover dismisses it
     if (probePopover) { _dismissProbe(); return; }
 
     const rect   = canvasEl.getBoundingClientRect();
@@ -385,6 +394,7 @@ function _buildHTML() {
         <div class="view-strip-group">
           <button id="btn-contrast" class="btn view-strip-btn" aria-pressed="false" title="Contrast map">Contrast</button>
           <button id="btn-weight"   class="btn view-strip-btn" aria-pressed="false" title="Visual weight map">Weight</button>
+          <button id="btn-probe"    class="btn view-strip-btn" aria-pressed="false" title="Click canvas to probe pixel color and WCAG contrast">Probe</button>
         </div>
         <div class="view-strip-sep"></div>
         <div class="view-strip-group">
