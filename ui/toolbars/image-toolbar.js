@@ -11,8 +11,15 @@
 export function renderImageToolbar(container, layer, frameIndex, layerManager, opts = {}) {
   const fit      = layer.fit ?? 'fill';
   const showSize = !!(opts.frame?.multi_image);
-  const widthPct = layer.width_pct  ?? 100;
+  const widthPct  = layer.width_pct  ?? 100;
   const heightPct = layer.height_pct ?? 100;
+
+  // Determine aspect ratio: natural image dimensions > stored layer ratio > unknown
+  const img         = opts.images?.get(layer.src);
+  const naturalRatio = (img && img.naturalWidth > 0) ? img.naturalWidth / img.naturalHeight : null;
+  const storedRatio  = layer.aspect_ratio ?? null;
+  const activeRatio  = naturalRatio ?? storedRatio;  // what we use for width→height math
+  const ratioKnown   = naturalRatio != null;         // true = auto-detected, no editable field needed
 
   container.innerHTML = `
     <div class="tb-grid">
@@ -40,6 +47,16 @@ export function renderImageToolbar(container, layer, frameIndex, layerManager, o
         <span class="ctrl-label">Height %</span>
         <input type="number" id="ctx-img-height" value="${heightPct.toFixed(1)}" min="1" max="200" step="1" readonly style="opacity:0.6;cursor:default;" title="Locked to aspect ratio — edit Width to resize">
       </div>
+      ${!ratioKnown ? `
+      <div class="ctrl">
+        <span class="ctrl-label">Aspect ratio</span>
+        <input type="number" id="ctx-img-ratio"
+          value="${storedRatio != null ? storedRatio.toFixed(4) : ''}"
+          placeholder="e.g. 1.7778"
+          min="0.1" max="10" step="0.0001"
+          title="Width ÷ Height — set manually when image dimensions are unavailable">
+      </div>
+      ` : ''}
       ` : ''}
 
       <div class="tb-actions">
@@ -63,17 +80,25 @@ export function renderImageToolbar(container, layer, frameIndex, layerManager, o
   });
 
   if (showSize) {
+    // Aspect ratio manual input (shown only when natural dimensions unavailable)
+    const ratioInput = container.querySelector('#ctx-img-ratio');
+    if (ratioInput) {
+      ratioInput.addEventListener('change', e => {
+        const val = parseFloat(e.target.value);
+        if (!isNaN(val) && val > 0) {
+          layerManager.updateLayer(frameIndex, layer.id, { aspect_ratio: val });
+          layer.aspect_ratio = val; // keep in-scope reference current
+        }
+      });
+    }
+
     container.querySelector('#ctx-img-width').addEventListener('change', e => {
       const newWidthPct = parseFloat(e.target.value);
       if (isNaN(newWidthPct) || newWidthPct < 1) return;
 
-      // Compute locked height using natural image aspect ratio
-      const img = opts.images?.get(layer.src);
-      let newHeightPct = newWidthPct;
-      if (img && img.naturalWidth > 0) {
-        const ratio = img.naturalWidth / img.naturalHeight;
-        newHeightPct = newWidthPct / ratio;
-      }
+      // Use natural ratio, then stored ratio, then 1:1 fallback
+      const ratio = naturalRatio ?? layer.aspect_ratio ?? null;
+      const newHeightPct = ratio != null ? newWidthPct / ratio : newWidthPct;
 
       layerManager.updateLayer(frameIndex, layer.id, {
         width_pct:  newWidthPct,

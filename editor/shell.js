@@ -321,7 +321,9 @@ export function mountEditor(state) {
         opacity:    1,
       };
       frame.layers = frame.layers ?? [];
-      frame.layers.push(newLayer);
+      // Insert after overlays, before text/shape layers
+      const lastOverlayIdx = frame.layers.reduce((last, l, i) => l.type === 'overlay' ? i : last, -1);
+      frame.layers.splice(lastOverlayIdx + 1, 0, newLayer);
       layerManager.selectLayer(newLayer.id);
     } else {
       // Existing behaviour — replace background image

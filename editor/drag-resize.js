@@ -131,12 +131,12 @@ export class DragResize {
           this._resizeHandle = handle;
           this._origBounds   = { ...bounds };
 
-          // Aspect ratio: lock for image layers using natural image dimensions
+          // Aspect ratio: natural image dimensions → stored layer ratio → free resize
           if (selLayer.type === 'image' || selLayer.type === 'logo') {
             const img = this._state.images?.get(selLayer.src);
-            this._aspectRatio = img
+            this._aspectRatio = (img && img.naturalWidth > 0)
               ? img.naturalWidth / img.naturalHeight
-              : null;
+              : (selLayer.aspect_ratio ?? null);
           } else {
             this._aspectRatio = null;
           }
