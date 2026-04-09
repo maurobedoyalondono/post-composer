@@ -133,54 +133,108 @@ export function computeLayerBounds(layer, w, h) {
 }
 
 /**
+ * Compute the image content rect after inset for a border.
+ * Total bounding box footprint is unchanged — image shrinks inward.
+ * @param {number} x - layer top-left x in canvas pixels
+ * @param {number} y - layer top-left y in canvas pixels
+ * @param {number} iw - layer width in canvas pixels
+ * @param {number} ih - layer height in canvas pixels
+ * @param {number|null} borderWidthPx
+ * @returns {{ x: number, y: number, width: number, height: number }}
+ */
+export function computeImageInsetRect(x, y, iw, ih, borderWidthPx) {
+  const bw = borderWidthPx ?? 0;
+  return {
+    x:      x + bw,
+    y:      y + bw,
+    width:  Math.max(0, iw - bw * 2),
+    height: Math.max(0, ih - bw * 2),
+  };
+}
+
+/**
  * Render a single layer onto the canvas context.
  * @param {CanvasRenderingContext2D} ctx
  * @param {object} layer
  * @param {number} w — canvas width
  * @param {number} h — canvas height
  * @param {Map<string, HTMLImageElement>} images — keyed by filename
+ * @param {object} [globals] — project.globals (for border_width_px)
  */
-export function renderLayer(ctx, layer, w, h, images) {
+export function renderLayer(ctx, layer, w, h, images, globals = {}) {
   switch (layer.type) {
-    case 'image':       _renderImageLayer(ctx, layer, w, h, images);  break;
-    case 'overlay':     _renderOverlayLayer(ctx, layer, w, h);        break;
-    case 'text':        _renderTextLayer(ctx, layer, w, h);           break;
-    case 'shape':       _renderShapeLayer(ctx, layer, w, h);          break;
-    case 'stats_block': _renderStatsBlock(ctx, layer, w, h);          break;
-    case 'logo':        _renderLogoLayer(ctx, layer, w, h, images);   break;
+    case 'image':       _renderImageLayer(ctx, layer, w, h, images, globals); break;
+    case 'overlay':     _renderOverlayLayer(ctx, layer, w, h);                break;
+    case 'text':        _renderTextLayer(ctx, layer, w, h);                   break;
+    case 'shape':       _renderShapeLayer(ctx, layer, w, h);                  break;
+    case 'stats_block': _renderStatsBlock(ctx, layer, w, h);                  break;
+    case 'logo':        _renderLogoLayer(ctx, layer, w, h, images);           break;
   }
 }
 
 // ── Private render functions ──────────────────────────────────────────────────
 
-function _renderImageLayer(ctx, layer, w, h, images) {
+function _renderImageLayer(ctx, layer, w, h, images, globals) {
   const img = images?.get(layer.src);
   if (!img) return;
+
   const { x, y } = resolvePosition(layer.position, w, h);
   const iw = (layer.width_pct  ?? 100) / 100 * w;
   const ih = (layer.height_pct ?? 100) / 100 * h;
-  const fit = layer.fit ?? 'fill';
+  const fit    = layer.fit ?? 'fill';
+  const rotDeg = layer.rotation_deg ?? 0;
+
+  const borderEnabled = layer.border?.enabled ?? false;
+  const borderColor   = layer.border?.color   ?? '#ffffff';
+  const bw = borderEnabled ? (globals?.border_width_px ?? 4) : 0;
+
+  const cx = x + iw / 2;
+  const cy = y + ih / 2;
+
   ctx.save();
   ctx.globalAlpha = layer.opacity ?? 1;
 
+  if (rotDeg !== 0) {
+    ctx.translate(cx, cy);
+    ctx.rotate(rotDeg * Math.PI / 180);
+    ctx.translate(-cx, -cy);
+  }
+
+  // Border: fill full bounding box before image
+  if (borderEnabled && bw > 0) {
+    ctx.fillStyle = borderColor;
+    ctx.fillRect(x, y, iw, ih);
+  }
+
+  // Image draw rect — inset by border width on all sides
+  const inset = computeImageInsetRect(x, y, iw, ih, bw);
+  const { x: ix, y: iy, width: iiw, height: iih } = inset;
+
+  if (iiw <= 0 || iih <= 0) {
+    ctx.restore();
+    return;
+  }
+
   if (fit === 'fill') {
-    ctx.drawImage(img, x, y, iw, ih);
+    ctx.drawImage(img, ix, iy, iiw, iih);
   } else if (fit === 'cover') {
-    const scale = Math.max(iw / img.naturalWidth, ih / img.naturalHeight);
+    const scale = Math.max(iiw / img.naturalWidth, iih / img.naturalHeight);
     const dw = img.naturalWidth  * scale;
     const dh = img.naturalHeight * scale;
-    const dx = x + (iw - dw) / 2;
-    const dy = y + (ih - dh) / 2;
+    const dx = ix + (iiw - dw) / 2;
+    const dy = iy + (iih - dh) / 2;
+    ctx.save();
     ctx.beginPath();
-    ctx.rect(x, y, iw, ih);
+    ctx.rect(ix, iy, iiw, iih);
     ctx.clip();
     ctx.drawImage(img, dx, dy, dw, dh);
+    ctx.restore();
   } else { // contain
-    const scale = Math.min(iw / img.naturalWidth, ih / img.naturalHeight);
+    const scale = Math.min(iiw / img.naturalWidth, iih / img.naturalHeight);
     const dw = img.naturalWidth  * scale;
     const dh = img.naturalHeight * scale;
-    const dx = x + (iw - dw) / 2;
-    const dy = y + (ih - dh) / 2;
+    const dx = ix + (iiw - dw) / 2;
+    const dy = iy + (iih - dh) / 2;
     ctx.drawImage(img, dx, dy, dw, dh);
   }
 

@@ -1,5 +1,6 @@
 import { describe, it, assertEqual } from '../test-helper.js';
 import { resolvePosition, computeTextBounds } from '../../editor/layers.js';
+import { computeImageInsetRect } from '../../editor/layers.js';
 
 describe('resolvePosition', () => {
   it('top-left with no offset → {x:0, y:0}', () => {
@@ -95,5 +96,37 @@ describe('computeTextBounds', () => {
     // sizePx = 5% of 1000 = 50; maxW = 80% of 1000 = 800
     assertEqual(bounds.width, 800);
     assertEqual(bounds.height >= 50, true);
+  });
+});
+
+describe('computeImageInsetRect', () => {
+  it('border 0 — returns original rect unchanged', () => {
+    const r = computeImageInsetRect(10, 20, 200, 100, 0);
+    assertEqual(r.x,      10);
+    assertEqual(r.y,      20);
+    assertEqual(r.width,  200);
+    assertEqual(r.height, 100);
+  });
+
+  it('border 10 — insets by 10px on all sides', () => {
+    const r = computeImageInsetRect(0, 0, 200, 100, 10);
+    assertEqual(r.x,      10);
+    assertEqual(r.y,      10);
+    assertEqual(r.width,  180);
+    assertEqual(r.height, 80);
+  });
+
+  it('border larger than half-width — width and height floored to 0', () => {
+    const r = computeImageInsetRect(0, 0, 20, 20, 20);
+    assertEqual(r.width,  0);
+    assertEqual(r.height, 0);
+  });
+
+  it('null borderWidthPx treated as 0', () => {
+    const r = computeImageInsetRect(5, 5, 100, 50, null);
+    assertEqual(r.x, 5);
+    assertEqual(r.y, 5);
+    assertEqual(r.width, 100);
+    assertEqual(r.height, 50);
   });
 });
