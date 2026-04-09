@@ -39,9 +39,10 @@ export class Renderer {
     }
 
     // Layers in declaration order — skip hidden layers
+    const globals = project.globals ?? {};
     for (const layer of (frame.layers ?? [])) {
       if (layer.hidden) continue;
-      renderLayer(ctx, layer, w, h, images);
+      renderLayer(ctx, layer, w, h, images, globals);
     }
 
     // Layer-bounds overlay (all layers)
@@ -112,27 +113,76 @@ function _drawAllBounds(ctx, layers, w, h) {
   ctx.restore();
 }
 
+const ROTATION_HANDLE_RADIUS = 7;
+const ROTATION_HANDLE_OFFSET = 24;
+
 function _drawSelection(ctx, layer, w, h) {
   const b = layer.type === 'text'
     ? computeTextSelectionBounds(ctx, layer, w, h)
     : computeLayerBounds(layer, w, h);
   if (b.width === 0 && b.height === 0) return;
+
+  const isImageType = (layer.type === 'image' || layer.type === 'logo');
+  const rotDeg = isImageType ? (layer.rotation_deg ?? 0) : 0;
+  const bcx = b.x + b.width  / 2;
+  const bcy = b.y + b.height / 2;
+
   ctx.save();
+
+  if (rotDeg !== 0) {
+    ctx.translate(bcx, bcy);
+    ctx.rotate(rotDeg * Math.PI / 180);
+    ctx.translate(-bcx, -bcy);
+  }
+
+  // Selection box
   ctx.strokeStyle = 'rgba(100,160,255,0.9)';
   ctx.lineWidth   = 2;
   ctx.setLineDash([]);
   ctx.strokeRect(b.x, b.y, b.width, b.height);
+
   // Corner handles
   const hs = 6;
   ctx.fillStyle = '#64a0ff';
-  for (const [cx, cy] of [
+  for (const [hx, hy] of [
     [b.x,           b.y],
     [b.x + b.width, b.y],
     [b.x,           b.y + b.height],
     [b.x + b.width, b.y + b.height],
   ]) {
-    ctx.fillRect(cx - hs / 2, cy - hs / 2, hs, hs);
+    ctx.fillRect(hx - hs / 2, hy - hs / 2, hs, hs);
   }
+
+  // Rotation handle — image/logo layers only (drawn in rotated space)
+  if (isImageType) {
+    const handleX = b.x + b.width / 2;
+    const handleY = b.y - ROTATION_HANDLE_OFFSET;
+
+    // Connector line
+    ctx.strokeStyle = 'rgba(100,160,255,0.6)';
+    ctx.lineWidth   = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(handleX, b.y);
+    ctx.lineTo(handleX, handleY + ROTATION_HANDLE_RADIUS);
+    ctx.stroke();
+
+    // Handle circle
+    ctx.strokeStyle = 'rgba(100,160,255,0.9)';
+    ctx.lineWidth   = 2;
+    ctx.fillStyle   = '#1a2a4a';
+    ctx.beginPath();
+    ctx.arc(handleX, handleY, ROTATION_HANDLE_RADIUS, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Rotation arc icon inside circle
+    ctx.strokeStyle = '#64a0ff';
+    ctx.lineWidth   = 1.5;
+    ctx.beginPath();
+    ctx.arc(handleX, handleY, 3.5, 0.3, Math.PI * 1.7);
+    ctx.stroke();
+  }
+
   ctx.restore();
 }
 
