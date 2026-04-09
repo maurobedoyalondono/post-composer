@@ -230,24 +230,25 @@ export function mountEditor(state, projectStore) {
       // Project loaded — go through diff modal
       const diff = frameManager.diffProject(data);
       showProjectDiffModal(diff, ({ replaceFrameIds, addFrameIds }) => {
-        // Apply replace selections
-        for (const { frameId, incomingFrame } of diff.modified) {
-          if (replaceFrameIds.has(frameId)) {
-            const idx = state.project.frames.findIndex(f => f.id === frameId);
-            if (idx >= 0) state.project.frames[idx] = incomingFrame;
+        // No-op if user deselected everything
+        if (replaceFrameIds.size === 0 && addFrameIds.size === 0) return;
+
+        // Build merged frames array
+        const mergedFrames = state.project.frames.map(f => {
+          if (replaceFrameIds.has(f.id)) {
+            const mod = diff.modified.find(m => m.frameId === f.id);
+            return mod ? mod.incomingFrame : f;
           }
-        }
-        // Apply add selections
+          return f;
+        });
         for (const { frame } of diff.added) {
-          if (addFrameIds.has(frame.id)) {
-            state.project.frames.push(frame);
-          }
+          if (addFrameIds.has(frame.id)) mergedFrames.push(frame);
         }
-        // Re-set active frame to 0 to avoid out-of-range index
-        state.activeFrameIndex = 0;
-        state.selectedLayerId  = null;
+
+        state.setProject({ ...state.project, frames: mergedFrames });
         events.dispatchEvent(new CustomEvent('project:loaded', { detail: state.project }));
-        loadProjectFonts(state.project.design_tokens);
+        loadProjectFonts(state.project.design_tokens)
+          .catch(err => _showToast(`Font load error: ${err.message}`));
         projectStore.flush();
       });
     } catch (err) {
