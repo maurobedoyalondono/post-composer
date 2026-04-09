@@ -2,11 +2,6 @@
 import { describe, it, assert, assertEqual } from '../test-helper.js';
 import { extractDominantColors } from '../../editor/color-wheel-analysis.js';
 
-// Helper: build a 1×1 ImageData from RGBA values
-function px(r, g, b, a = 255) {
-  return new ImageData(new Uint8ClampedArray([r, g, b, a]), 1, 1);
-}
-
 // Helper: build an N×1 ImageData repeating one color
 function solidImage(r, g, b, n = 4) {
   const data = new Uint8ClampedArray(n * 4);
@@ -23,7 +18,7 @@ describe('extractDominantColors', () => {
     assert(result.length <= 4, `expected ≤4 clusters, got ${result.length}`);
   });
 
-  it('solid red image → dominant color has hex close to #ff0000', () => {
+  it('solid red image → dominant color has canvasPct 100', () => {
     const img = solidImage(255, 0, 0, 16);
     const result = extractDominantColors(img, 2);
     const top = result[0];
@@ -40,36 +35,48 @@ describe('extractDominantColors', () => {
     }
   });
 
-  it('marks neutral colors (s < 10) as isNeutral=true', () => {
-    // Pure white: r=255 g=255 b=255 → s=0
-    const img = solidImage(255, 255, 255, 16);
+  it('each result has hex, oklch, canvasPct, isNeutral', () => {
+    const img = solidImage(100, 150, 200, 16);
+    const result = extractDominantColors(img, 2);
+    const c = result[0];
+    assert(typeof c.hex === 'string',     'hex should be string');
+    assert(typeof c.oklch === 'object',   'oklch should be object');
+    assert(typeof c.oklch.L === 'number', 'oklch.L should be number');
+    assert(typeof c.oklch.C === 'number', 'oklch.C should be number');
+    assert(typeof c.oklch.h === 'number', 'oklch.h should be number');
+    assert(typeof c.canvasPct === 'number',  'canvasPct should be number');
+    assert(typeof c.isNeutral === 'boolean', 'isNeutral should be boolean');
+  });
+
+  it('marks neutral colors (C < 0.04) as isNeutral=true — white', () => {
+    const img = solidImage(255, 255, 255, 16); // white: OKLCH C ≈ 0
     const result = extractDominantColors(img, 2);
     assert(result[0].isNeutral === true, 'white should be neutral');
   });
 
-  it('marks saturated colors as isNeutral=false', () => {
-    // Pure red: s=100
-    const img = solidImage(255, 0, 0, 16);
+  it('marks saturated colors as isNeutral=false — pure red', () => {
+    const img = solidImage(255, 0, 0, 16); // red: OKLCH C ≈ 0.258
     const result = extractDominantColors(img, 2);
     assert(result[0].isNeutral === false, 'red should not be neutral');
   });
 
-  it('each result has hex, hsl, canvasPct, isNeutral', () => {
-    const img = solidImage(100, 150, 200, 16);
+  it('pure red maps to OKLCH hue around 29°', () => {
+    const img = solidImage(255, 0, 0, 16);
     const result = extractDominantColors(img, 2);
-    const c = result[0];
-    assert(typeof c.hex === 'string', 'hex should be string');
-    assert(typeof c.hsl === 'object', 'hsl should be object');
-    assert(typeof c.hsl.h === 'number', 'hsl.h should be number');
-    assert(typeof c.hsl.s === 'number', 'hsl.s should be number');
-    assert(typeof c.hsl.l === 'number', 'hsl.l should be number');
-    assert(typeof c.canvasPct === 'number', 'canvasPct should be number');
-    assert(typeof c.isNeutral === 'boolean', 'isNeutral should be boolean');
+    const h = result[0].oklch.h;
+    assert(h > 20 && h < 40, `pure red OKLCH hue should be ~29°, got ${h}`);
+  });
+
+  it('pure blue maps to OKLCH hue around 264°', () => {
+    const img = solidImage(0, 0, 255, 16);
+    const result = extractDominantColors(img, 2);
+    const h = result[0].oklch.h;
+    assert(h > 255 && h < 275, `pure blue OKLCH hue should be ~264°, got ${h}`);
   });
 
   it('all results have canvasPct > 0 (no empty clusters)', () => {
     const img = solidImage(255, 0, 0, 16);
-    const result = extractDominantColors(img, 8); // k=8 but only 1 real cluster
+    const result = extractDominantColors(img, 8);
     result.forEach(c => {
       assert(c.canvasPct > 0, `expected canvasPct > 0, got ${c.canvasPct}`);
     });
