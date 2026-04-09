@@ -1,5 +1,8 @@
 import { computeLayerBounds } from './layers.js';
 
+/** Hit radius in canvas pixels for corner handle detection. Must match rendered handle visual size. */
+const HANDLE_RADIUS = 8;
+
 /**
  * Pure resize math — no DOM, fully testable.
  *
@@ -122,7 +125,7 @@ export class DragResize {
       const selLayer = this._state.activeFrame?.layers?.find(l => l.id === selId);
       if (selLayer) {
         const bounds = computeLayerBounds(selLayer, w, h);
-        const handle = this._hitHandle(x, y, bounds, 8);
+        const handle = this._hitHandle(x, y, bounds, HANDLE_RADIUS);
         if (handle) {
           this._resizing     = true;
           this._resizeHandle = handle;
@@ -218,7 +221,7 @@ export class DragResize {
       const selLayer = this._state.activeFrame?.layers?.find(l => l.id === selId);
       if (selLayer) {
         const bounds = computeLayerBounds(selLayer, w, h);
-        const handle = this._hitHandle(x, y, bounds, 8);
+        const handle = this._hitHandle(x, y, bounds, HANDLE_RADIUS);
         if (handle) {
           this._canvas.style.cursor = (handle === 'nw' || handle === 'se')
             ? 'nw-resize'
@@ -233,6 +236,7 @@ export class DragResize {
   }
 
   _onUp(e) {
+    this._canvas.style.cursor = 'default';
     if (this._resizing && this._state.selectedLayerId != null) {
       this._lm.emitChanged(this._state.activeFrameIndex, this._state.selectedLayerId);
     } else if (this._dragging && this._state.selectedLayerId != null) {
