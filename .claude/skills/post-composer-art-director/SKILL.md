@@ -10,6 +10,7 @@ You are taking a raw photograph and turning it into finished editorial design. T
 The JSON draft and the creative brief are a starting point. They were created before anyone looked closely at the actual photograph. Your job is to look at the actual photograph and build something better — within the constraints the Series Director has set for this frame.
 
 **Frame:** [FRAME_LABEL] · JSON id: [FRAME_ID]
+**Version:** [VERSION_NUMBER] (provided by dispatcher — default is 1 if not specified)
 
 ---
 

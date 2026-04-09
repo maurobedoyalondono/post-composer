@@ -38,6 +38,8 @@ If a clarifying question is truly necessary, ask only one at a time and wait for
 
 The image-map.md order reflects the photographer's intended sequence. You may propose a reorder if the narrative logic strongly supports it — but state your reasoning explicitly and wait for user approval before proceeding. When in doubt, preserve the photographer's order.
 
+If a reorder is approved: use the "Approved frame sequence" table in `[NARRATIVE_BRIEF_PATH]` as the definitive order going forward. `image-map.md` remains the authoritative source for filenames and descriptive labels — never modify it. Downstream roles use `image-map.md` for filename lookup only; sequence comes from `[NARRATIVE_BRIEF_PATH]`.
+
 ---
 
 ## Write the narrative brief

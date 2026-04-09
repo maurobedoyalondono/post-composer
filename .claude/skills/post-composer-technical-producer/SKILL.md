@@ -98,7 +98,7 @@ For multi-image frames: add `"multi_image": true`. For per-frame background: add
 
 ## Variety contract validation pass
 
-Before writing the JSON file, run every item from ai-manual.md Section 8 (Pre-Output Checklist). Fix every failure. Do not write the file until all 14 items pass.
+Before writing the JSON file, run every item from ai-manual.md Section 8 (Pre-Output Checklist). Fix every failure. Do not write the file until all items pass.
 
 If a checklist item fails:
 - Fix the JSON in memory
@@ -120,4 +120,4 @@ Once approved:
 `STATUS: JSON COMPLETE`
 - Path: `[PROJECT_JSON_PATH]`
 - Frame count: [N]
-- Variety contract: all 14 checklist items passed
+- Variety contract: all checklist items in ai-manual.md Section 8 passed

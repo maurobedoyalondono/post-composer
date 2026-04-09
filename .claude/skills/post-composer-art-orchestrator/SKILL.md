@@ -26,6 +26,8 @@ Confirm before dispatching the Series Director:
 | Agent-preview base URL | `http://127.0.0.1:5500/post-composer/agent-preview.html` |
 | Frame list | All frame IDs in sequence, from the project JSON |
 
+All values in this table are provided by the caller when dispatching this skill. If any value is missing, stop and ask before proceeding.
+
 ---
 
 ## Phase 1 — Series Director loop

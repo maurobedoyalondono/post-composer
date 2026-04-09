@@ -70,7 +70,9 @@ Check `variety_contract.copy_tone_variety`. If `true`, verify that text frames d
 
 **Rule:** At least 2 different copy registers represented across text frames.
 
-**Failure action:** Flag to Art Director with tone variety requirements as a note (non-blocking if variety_contract.copy_tone_variety is true and the Creative Director has declared different registers).
+**Failure action:** Conditional — do not use a single rejection path:
+- If `variety_contract.copy_tone_variety: true`: do NOT reject. Add a note in the SERIES APPROVED context block for the Art Director, naming which frames need varied registers.
+- If `variety_contract.copy_tone_variety` is absent or false and no register variety is present: include as a required change in SERIES REJECTED.
 
 ### 7. Silence pacing
 Check `variety_contract.silence_map` (frame numbers that should be silent).
