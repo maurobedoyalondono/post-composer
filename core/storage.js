@@ -9,12 +9,17 @@ const KEYS = {
 };
 
 export const storage = {
-  /** Save full project JSON. Updates the index automatically. */
-  saveProject(project) {
-    const { id, title } = project;
-    localStorage.setItem(KEYS.project(id), JSON.stringify(project));
+  /**
+   * Save full project data keyed by id.
+   * Throws on localStorage quota error — callers must handle.
+   * @param {string} id — the brief id (universal project key)
+   * @param {object} projectData — raw project JSON (frames, design_tokens, etc.)
+   */
+  saveProject(id, projectData) {
+    localStorage.setItem(KEYS.project(id), JSON.stringify(projectData));
     const index = this._readIndex();
     const existing = index.findIndex(p => p.id === id);
+    const title = projectData?.project?.title ?? '';
     const entry = { id, title, updatedAt: Date.now() };
     if (existing >= 0) index[existing] = entry;
     else index.push(entry);

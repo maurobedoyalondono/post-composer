@@ -5,24 +5,24 @@ import { storage } from '../../core/storage.js';
 const TEST_ID = '__test__';
 
 describe('storage', () => {
-  it('saveProject and getProject round-trip', () => {
-    const proj = { id: TEST_ID, title: 'Test', frames: [] };
-    storage.saveProject(proj);
+  it('saveProject(id, data) and getProject round-trip', () => {
+    const data = { project: { id: TEST_ID, title: 'Test' }, frames: [] };
+    storage.saveProject(TEST_ID, data);
     const loaded = storage.getProject(TEST_ID);
-    assertEqual(loaded.title, 'Test');
+    assertEqual(loaded.project.title, 'Test');
     storage.deleteProject(TEST_ID);
   });
 
   it('listProjects includes saved project', () => {
-    const proj = { id: TEST_ID, title: 'Test', frames: [] };
-    storage.saveProject(proj);
+    const data = { project: { id: TEST_ID, title: 'Test' }, frames: [] };
+    storage.saveProject(TEST_ID, data);
     const list = storage.listProjects();
     assert(list.some(p => p.id === TEST_ID));
     storage.deleteProject(TEST_ID);
   });
 
   it('deleteProject removes it from list', () => {
-    storage.saveProject({ id: TEST_ID, title: 'Test', frames: [] });
+    storage.saveProject(TEST_ID, { project: { id: TEST_ID, title: 'Test' }, frames: [] });
     storage.deleteProject(TEST_ID);
     assert(!storage.listProjects().some(p => p.id === TEST_ID));
   });
