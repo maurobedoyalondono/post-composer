@@ -254,3 +254,59 @@ describe('validator — summarise', () => {
     assertEqual(s.patternDistribution['full-bleed'], 1);
   });
 });
+
+describe('validator — frame multi_image and bg_color', () => {
+  function frameProject(frameOverrides) {
+    const p = minimal();
+    p.frames = [{
+      id: 'f01',
+      image_src: 'test-img',
+      image_filename: 'test.jpg',
+      composition_pattern: 'editorial-anchor',
+      layers: [],
+      ...frameOverrides,
+    }];
+    // shape_quota waiver so shape quota doesn't fail with 1 frame
+    p.variety_contract.shape_quota = { min_per_n_frames: 3, waiver: 'single frame test' };
+    return p;
+  }
+
+  it('accepts multi_image: true without image_src/image_filename', () => {
+    const p = minimal();
+    p.frames = [{
+      id: 'f01',
+      multi_image: true,
+      composition_pattern: 'editorial-anchor',
+      layers: [],
+    }];
+    p.variety_contract.shape_quota = { min_per_n_frames: 3, waiver: 'test' };
+    const result = validate(p);
+    assert(result.valid, result.errors?.join(', '));
+  });
+
+  it('still requires image_src when multi_image is false', () => {
+    const p = frameProject({ image_src: undefined });
+    assert(!validate(p).valid);
+  });
+
+  it('still requires image_filename when multi_image is false', () => {
+    const p = frameProject({ image_filename: undefined });
+    assert(!validate(p).valid);
+  });
+
+  it('accepts a valid bg_color hex', () => {
+    const result = validate(frameProject({ bg_color: '#1a2b3c' }));
+    assert(result.valid, result.errors?.join(', '));
+  });
+
+  it('rejects bg_color that is not 6-digit hex', () => {
+    assert(!validate(frameProject({ bg_color: 'red' })).valid);
+    assert(!validate(frameProject({ bg_color: '#fff' })).valid);
+    assert(!validate(frameProject({ bg_color: '#gggggg' })).valid);
+  });
+
+  it('accepts frame with no bg_color (absent)', () => {
+    const result = validate(frameProject({}));
+    assert(result.valid, result.errors?.join(', '));
+  });
+});

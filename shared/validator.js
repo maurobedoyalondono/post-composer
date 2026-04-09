@@ -110,9 +110,19 @@ function _validateVarietyContract(vc, err) {
 
 function _validateFrame(frame, index, usedLayerIds, err) {
   const label = `frames[${index}]`;
-  if (!frame.id)                err(`${label}.id is required`);
-  if (!frame.image_src)         err(`${label}.image_src is required`);
-  if (!frame.image_filename)    err(`${label}.image_filename is required`);
+  if (!frame.id) err(`${label}.id is required`);
+
+  // image_src and image_filename are required only in single-image mode
+  if (!frame.multi_image) {
+    if (!frame.image_src)      err(`${label}.image_src is required`);
+    if (!frame.image_filename) err(`${label}.image_filename is required`);
+  }
+
+  // bg_color, if present, must be a valid 6-digit hex color
+  if (frame.bg_color != null && !/^#[0-9a-fA-F]{6}$/.test(frame.bg_color)) {
+    err(`${label}.bg_color must be a 6-digit hex color`);
+  }
+
   if (!VALID_COMPOSITION_PATTERNS.includes(frame.composition_pattern))
     err(`${label}.composition_pattern "${frame.composition_pattern}" is not a valid pattern`);
   if (!Array.isArray(frame.layers)) err(`${label}.layers must be an array`);
