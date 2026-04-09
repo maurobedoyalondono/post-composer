@@ -1,13 +1,15 @@
 // app.js
-import { AppState }    from './core/state.js';
-import { router }      from './core/router.js';
-import { storage }     from './core/storage.js';
-import { events }      from './core/events.js';
+import { AppState }     from './core/state.js';
+import { router }       from './core/router.js';
+import { storage }      from './core/storage.js';
+import { events }       from './core/events.js';
+import { ProjectStore } from './core/project-store.js';
 import { mountEditor }  from './editor/shell.js';
 import { mountManager } from './manager/shell.js';
 
-const state = new AppState();
-let editorMounted = false;
+const state        = new AppState();
+const projectStore = new ProjectStore(state);
+let editorMounted  = false;
 
 async function init() {
   router.init(state);
@@ -16,12 +18,12 @@ async function init() {
 
   events.addEventListener('view:changed', e => {
     if (e.detail.view === 'editor' && !editorMounted) {
-      mountEditor(state);
+      mountEditor(state, projectStore);
       editorMounted = true;
     }
   });
 
-  // Restore last session: if a brief was open, navigate straight back to the editor
+  // Restore last session
   const { lastBriefId } = storage.getPrefs();
   if (lastBriefId && storage.getBrief(lastBriefId)) {
     state.activeBriefId = lastBriefId;

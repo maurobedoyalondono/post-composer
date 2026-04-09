@@ -21,7 +21,7 @@ import { storage }              from '../core/storage.js';
  * Call once after DOM is ready.
  * @param {import('../core/state.js').AppState} state
  */
-export function mountEditor(state) {
+export function mountEditor(state, projectStore) {
   const root = document.getElementById('editor-view');
   if (!root) throw new Error('#editor-view not found');
   root.innerHTML = _buildHTML();
@@ -71,7 +71,35 @@ export function mountEditor(state) {
 
   // ── Header: back to Project Manager ────────
   root.querySelector('#btn-back').addEventListener('click', () => {
+    projectStore.flush();
     router.navigate('manager');
+  });
+
+  // ── Save status indicator ────────────────────
+  const saveStatusEl = root.querySelector('#save-status');
+  events.addEventListener('project:save-status', e => {
+    const { status, time } = e.detail;
+    if (status === 'pending') {
+      saveStatusEl.textContent = 'Saving…';
+      saveStatusEl.className = 'save-status save-status-pending';
+    } else if (status === 'saved') {
+      const t   = new Date(time);
+      const hm  = t.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+      saveStatusEl.textContent = `Saved ${hm}`;
+      saveStatusEl.className = 'save-status save-status-ok';
+      const banner = root.querySelector('.save-error-banner');
+      if (banner) banner.hidden = true;
+    } else if (status === 'failed') {
+      saveStatusEl.textContent = 'Save failed ⚠';
+      saveStatusEl.className = 'save-status save-status-error';
+    }
+  });
+
+  events.addEventListener('project:save-failed', e => {
+    const msg = e.detail.reason === 'quota'
+      ? 'Auto-save failed — storage full. Export your project or delete unused projects.'
+      : 'Auto-save failed — an error occurred.';
+    _showBanner(root, msg);
   });
 
   // ── Header: project name updates ───────────
@@ -370,6 +398,35 @@ function _fitCanvas(canvas, area, exportConfig) {
   canvas.style.height = `${Math.round(height_px * scale)}px`;
 }
 
+function _showBanner(root, msg) {
+  let banner = root.querySelector('.save-error-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.className = 'save-error-banner';
+    banner.style.cssText = [
+      'position:sticky', 'top:0', 'z-index:100',
+      'background:#7f1d1d', 'color:#fecaca',
+      'padding:8px 16px', 'font-size:12px', 'text-align:center',
+    ].join(';');
+    root.querySelector('.editor-shell').prepend(banner);
+  }
+  banner.textContent = msg;
+  banner.hidden = false;
+}
+
+function _showToast(msg, duration = 5000) {
+  const toast = document.createElement('div');
+  toast.textContent = msg;
+  toast.style.cssText = [
+    'position:fixed', 'bottom:24px', 'left:50%', 'transform:translateX(-50%)',
+    'z-index:9999', 'background:#1e293b', 'color:#e2e8f0',
+    'padding:10px 18px', 'border-radius:6px', 'font-size:13px',
+    'box-shadow:0 4px 16px rgba(0,0,0,0.5)', 'pointer-events:none',
+  ].join(';');
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), duration);
+}
+
 function _buildHTML() {
   return `
     <div class="editor-shell">
@@ -377,6 +434,7 @@ function _buildHTML() {
       <div class="editor-header">
         <button id="btn-back" class="btn-back">← Projects</button>
         <span id="header-project-name" class="header-project-name no-project">No project loaded</span>
+        <span id="save-status" class="save-status" style="font-size:11px;color:#6b7280;margin-right:8px;"></span>
         <div class="header-project-actions">
           <label class="btn view-strip-btn" for="input-json" title="Load project JSON">Load JSON</label>
           <input id="input-json" type="file" accept=".json" class="file-input-hidden">
