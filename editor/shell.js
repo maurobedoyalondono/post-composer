@@ -217,7 +217,7 @@ export function mountEditor(state, projectStore) {
     if (detail.view === 'editor') {
       // _applyActiveBrief is async; _repaint runs immediately with current state.
       // images:loaded event triggers a second repaint once images finish loading.
-      _applyActiveBrief();
+      _applyActiveBrief().catch(err => console.error('[shell] _applyActiveBrief error', err));
       _repaint();
     }
   });
