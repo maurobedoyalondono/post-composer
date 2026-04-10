@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>post-composer async tests</title>
+  <style>
+    body { background:#0d0f1a; color:#e2e8f0; font-family:system-ui,sans-serif; padding:24px; }
+    h1   { color:#a5b4fc; margin-bottom:8px; }
+    p    { color:#6b7280; margin-bottom:24px; font-size:13px; }
+  </style>
+</head>
+<body>
+  <h1>post-composer async test runner</h1>
+  <p>Open browser console for additional detail. Refresh to re-run.</p>
+  <div id="results"></div>
+  <script type="module">
+    import { summaryAsync } from '../test-helper.js';
+    import './image-store.test.js';
+    await summaryAsync();
+  </script>
+</body>
+</html>

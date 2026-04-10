@@ -52,3 +52,32 @@ export function summary() {
   el.textContent = `${passed + failed} tests — ${passed} passed, ${failed} failed`;
   document.getElementById('results').appendChild(el);
 }
+
+// Async test registry — populated by itAsync(), drained by summaryAsync()
+const _asyncTests = [];
+
+export function itAsync(label, fn) {
+  _asyncTests.push(
+    fn().then(
+      () => {
+        passed++;
+        const row = document.createElement('div');
+        row.style.cssText = 'padding:3px 0 3px 16px;font-size:13px;color:#10b981;';
+        row.textContent = `✓ ${label}`;
+        document.getElementById('results').appendChild(row);
+      },
+      (e) => {
+        failed++;
+        const row = document.createElement('div');
+        row.style.cssText = 'padding:3px 0 3px 16px;font-size:13px;color:#ef4444;';
+        row.textContent = `✗ ${label}: ${e.message}`;
+        document.getElementById('results').appendChild(row);
+      }
+    )
+  );
+}
+
+export async function summaryAsync() {
+  await Promise.all(_asyncTests);
+  summary();
+}
