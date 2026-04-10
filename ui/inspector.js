@@ -6,6 +6,8 @@ import { renderImageToolbar }  from './toolbars/image-toolbar.js';
 import { renderOverlayToolbar} from './toolbars/overlay-toolbar.js';
 import { showMultiImageRevertModal } from './modals/multi-image-revert.js';
 
+const DEFAULT_BORDER_WIDTH_PX = 4;
+
 const VALID_COMPOSITION_PATTERNS = [
   'editorial-anchor', 'minimal-strip', 'data-callout',
   'full-bleed', 'layered-depth', 'diagonal-tension', 'centered-monument',
@@ -30,7 +32,8 @@ export class Inspector {
     events.addEventListener('frame:changed',  () => this._render());
     events.addEventListener('layer:selected', () => this._render());
     events.addEventListener('layer:deleted',  () => this._render());
-    events.addEventListener('layer:changed',  () => this._renderLayerSection());
+    events.addEventListener('layer:changed',   () => this._renderLayerSection());
+    events.addEventListener('globals:changed', () => this._renderGlobalsSection());
 
     // Plan 2c: listen for analysis:contrast to update WCAG badge
     events.addEventListener('analysis:contrast', e => {
@@ -233,7 +236,7 @@ export class Inspector {
     if (!project) { section.innerHTML = ''; return; }
 
     const globals       = project.globals ?? {};
-    const borderWidthPx = globals.border_width_px ?? 4;
+    const borderWidthPx = globals.border_width_px ?? DEFAULT_BORDER_WIDTH_PX;
 
     section.innerHTML = `
       <div class="inspector-section-title">Project Settings</div>
@@ -253,7 +256,7 @@ export class Inspector {
     section.querySelector('#insp-border-width').addEventListener('change', e => {
       const val = parseInt(e.target.value, 10);
       if (isNaN(val) || val < 0) {
-        e.target.value = (project.globals?.border_width_px ?? 4);
+        e.target.value = (project.globals?.border_width_px ?? DEFAULT_BORDER_WIDTH_PX);
         return;
       }
       if (!project.globals) project.globals = {};
