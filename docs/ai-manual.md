@@ -441,6 +441,19 @@ Multi-image mode (`frame.multi_image: true`):
 **Layer ordering with multi_image:**
 Image layers always come first in the array (they are the background). Overlay, shapes, and text follow the standard order from Section 7.
 
+**`rotation_deg`** — optional, default `0`. Rotates the image layer around its center. Any float value in degrees (positive = clockwise). Applied after position and size. Does not change the layer's bounding box footprint in the JSON — the bounding box is always the axis-aligned box before rotation.
+
+Use on `multi_image` inset layers where a slight rotation adds editorial energy. Avoid on full-canvas background images (100×100%) — rotation is visually meaningless when the image fills the frame and produces empty corner artifacts.
+
+**`border`** — optional object. When `border.enabled: true`, a solid border is drawn at the layer's full bounding box and the image content is inset by `globals.border_width_px` on all four sides. The total canvas footprint of the layer does not change — the image shrinks inward.
+
+- `border.color` — hex string. Pull from `design_tokens.palette` for tonal consistency.
+- Border width is set globally in `globals.border_width_px` (integer, pixels). It cannot be overridden per layer.
+
+Anti-pattern: enabling a border on a full-canvas image (100×100%) — the border clips at the canvas edge and is largely invisible.
+
+**`globals.border_width_px`** — integer, default `4`. Applies to every image layer where `border.enabled: true`. Set in the Project Settings panel; not per-frame.
+
 ### overlay layer
 
 Two strategies — given equal weight. Choose based on what is at the text zone:
@@ -760,4 +773,5 @@ Run before outputting any JSON. Fix every failure. Never flag and defer.
 □ multi_image frames: bg_color set if image layers don't cover the full canvas
 □ Every font `family` referenced in any text layer appears in `globals.google_fonts` — cross-check the array against every `font.family` value in your output
 □ max_width_pct set on every text layer
+□ border.enabled image layers: confirm layer is not full-canvas (100×100%) — border clips at canvas edge
 ```
