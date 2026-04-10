@@ -135,7 +135,7 @@ export class ProjectList {
               this.deps.onProjectDeleted?.(id);
             }
             storage.deleteProject(id);
-            storage.deleteBrief(id); // also calls storage.deleteImages(id)
+            storage.deleteBrief(id); // also fires imageStore.delete(id) for IndexedDB cleanup
             this.refresh();
           }
         );
