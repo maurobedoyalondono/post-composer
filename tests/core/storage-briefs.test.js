@@ -46,6 +46,27 @@ describe('storage.saveBrief / getBrief', () => {
     assert(!('updatedAt' in b), 'saveBrief must not add updatedAt to the caller\'s object');
     storage.deleteBrief(T);
   });
+
+  it('saveBrief strips dataUrl from imageMeta before storing', () => {
+    const b = {
+      id: '__strip_test__',
+      title: 'Strip Test',
+      platform: 'instagram-portrait',
+      story: 'A story.',
+      tone: 'cinematic',
+      imageMeta: [
+        { filename: 'a.jpg', label: 'Photo A', dataUrl: 'data:image/jpeg;base64,AAAA' },
+      ],
+      createdAt: Date.now(),
+    };
+    storage.saveBrief(b);
+    const got = storage.getBrief('__strip_test__');
+    assertEqual(got.imageMeta.length, 1, 'should have one entry');
+    assertEqual(got.imageMeta[0].filename, 'a.jpg', 'should keep filename');
+    assertEqual(got.imageMeta[0].label, 'Photo A', 'should keep label');
+    assert(!('dataUrl' in got.imageMeta[0]), 'dataUrl must be stripped');
+    storage.deleteBrief('__strip_test__');
+  });
 });
 
 describe('storage.listBriefs', () => {

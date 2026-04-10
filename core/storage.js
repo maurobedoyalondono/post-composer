@@ -1,11 +1,12 @@
 // core/storage.js
+import { imageStore } from './image-store.js';
+
 const KEYS = {
   index: 'pc_projects_index',
   project: id => `pc_project_${id}`,
   prefs: 'pc_prefs',
   briefIndex: 'pc_briefs',
   brief: id => `pc_brief_${id}`,
-  images: id => `pc_images_${id}`,
 };
 
 export const storage = {
@@ -62,7 +63,8 @@ export const storage = {
   saveBrief(brief) {
     const now = Date.now();
     const { id, title, platform, tone, imageMeta } = brief;
-    localStorage.setItem(KEYS.brief(id), JSON.stringify({ ...brief, updatedAt: now }));
+    const slimMeta = (imageMeta ?? []).map(({ filename, label }) => ({ filename, label }));
+    localStorage.setItem(KEYS.brief(id), JSON.stringify({ ...brief, imageMeta: slimMeta, updatedAt: now }));
     const index = this._readBriefIndex();
     const existing = index.findIndex(b => b.id === id);
     const entry = {
@@ -89,7 +91,7 @@ export const storage = {
   /** Removes brief from storage and index. */
   deleteBrief(id) {
     localStorage.removeItem(KEYS.brief(id));
-    this.deleteImages(id);
+    imageStore.delete(id); // fire-and-forget — brief removed sync, images cleaned up async
     const index = this._readBriefIndex().filter(b => b.id !== id);
     localStorage.setItem(KEYS.briefIndex, JSON.stringify(index));
   },
@@ -99,56 +101,4 @@ export const storage = {
     return raw ? JSON.parse(raw) : [];
   },
 
-  // ── Image storage (per brief) ──────────────────────────────────────────
-
-  /**
-   * Load all stored images for a brief.
-   * @param {string} briefId
-   * @returns {{ [filename: string]: string }} filename → dataURL
-   */
-  loadImages(briefId) {
-    try {
-      const raw = localStorage.getItem(KEYS.images(briefId));
-      return raw ? JSON.parse(raw) : {};
-    } catch {
-      return {};
-    }
-  },
-
-  /**
-   * Merge new images into localStorage for a brief.
-   * @param {string} briefId
-   * @param {{ [filename: string]: string }} imageMap — filename → dataURL
-   * @returns {string[]} filenames that could not be saved due to quota
-   */
-  saveImages(briefId, imageMap) {
-    const existing = this.loadImages(briefId);
-    const merged   = { ...existing, ...imageMap };
-    try {
-      localStorage.setItem(KEYS.images(briefId), JSON.stringify(merged));
-      return [];
-    } catch {
-      // Quota hit — try saving each image individually
-      const failed = [];
-      let saved = { ...existing };
-      for (const [filename, dataURL] of Object.entries(imageMap)) {
-        try {
-          saved[filename] = dataURL;
-          localStorage.setItem(KEYS.images(briefId), JSON.stringify(saved));
-        } catch {
-          delete saved[filename];
-          failed.push(filename);
-        }
-      }
-      return failed;
-    }
-  },
-
-  /**
-   * Remove all stored images for a brief (call when brief is deleted).
-   * @param {string} briefId
-   */
-  deleteImages(briefId) {
-    localStorage.removeItem(KEYS.images(briefId));
-  },
 };
