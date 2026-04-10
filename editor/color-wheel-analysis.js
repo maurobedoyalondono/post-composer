@@ -169,6 +169,7 @@ export function extractDominantColors(imageData, k = 8) {
     .map(({ oklch, j }) => ({
       hex:       _oklchToHex(oklch.L, oklch.C, oklch.h),
       oklch:     { L: oklch.L, C: oklch.C, h: oklch.h },
+      // Per-cluster rounding: displayed section totals may sum to 99 or 101 — this is expected.
       canvasPct: Math.round((counts[j] / samples.length) * 100),
       isNeutral: oklch.C < 0.04,
     }))
@@ -329,8 +330,7 @@ export function generateInsights(results, dominantColors) {
   }
 
   // Insight 2: harmony identification
-  const typeName  = best.type.replace('-', ' ');
-  const typeLabel = typeName.charAt(0).toUpperCase() + typeName.slice(1);
+  const typeLabel = best.type.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   insights.push({
     label: 'Best match',
     text: `${typeLabel} at ${best.score}%. ${_describeHues(chromatic)}`,
@@ -376,10 +376,12 @@ function _describeHues(chromatic) {
   // chromatic is pre-sorted by canvasPct descending (from extractDominantColors),
   // so chromatic[0] is the dominant chromatic color.
   const h = chromatic[0].oklch.h;
-  if (h < 60 || h >= 345)  return 'Your composition leans warm (red/orange).';
-  if (h < 105) return 'Your composition leans warm (yellow/green).';
-  if (h < 195) return 'Your composition leans cool (teal/cyan).';
-  if (h < 270) return 'Your composition leans cool (blue).';
+  // OKLCH hue reference: red≈29°, orange≈55°, yellow≈110°, green≈142°, cyan≈195°, blue≈264°, violet≈308°, magenta≈330°
+  if (h < 45 || h >= 340) return 'Your composition leans warm (red/orange).';
+  if (h < 90)  return 'Your composition leans warm (yellow).';
+  if (h < 145) return 'Your composition leans toward green.';
+  if (h < 215) return 'Your composition leans cool (teal/cyan).';
+  if (h < 280) return 'Your composition leans cool (blue).';
   return 'Your composition leans toward violet/purple.';
 }
 

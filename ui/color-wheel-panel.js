@@ -168,7 +168,7 @@ export class ColorWheelPanel {
   _harmonyRow(result, idx) {
     const isActive   = idx === this._activeIdx;
     const scoreColor = _scoreColor(result.score);
-    const label      = result.type.charAt(0).toUpperCase() + result.type.slice(1);
+    const label      = result.type.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     const barPct     = result.score;
     const scoreLabel = this._allNeutral    ? '—'
                      : this._lowConfidence ? `~${result.score}%`
@@ -242,7 +242,7 @@ export class ColorWheelPanel {
       return `<circle cx="${x}" cy="${y}" r="${r}" fill="${c.hex}" stroke="${stroke}" stroke-width="2" ${dashattr}/>`;
     }).join('');
 
-    const typeLabel    = active.type.charAt(0).toUpperCase() + active.type.slice(1);
+    const typeLabel    = active.type.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     const scoreDisplay = this._allNeutral    ? '—'
                        : this._lowConfidence ? `~${active.score}%`
                        :                      `${active.score}%`;
