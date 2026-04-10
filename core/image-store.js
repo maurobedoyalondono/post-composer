@@ -78,9 +78,10 @@ export const imageStore = {
       const tx    = db.transaction(STORE_NAME, 'readwrite');
       const store = tx.objectStore(STORE_NAME);
       const range = IDBKeyRange.bound([briefId, ''], [briefId, '\uffff']);
-      const req   = store.delete(range);
-      req.onsuccess = () => resolve();
-      req.onerror   = e => reject(e.target.error);
+      store.delete(range);
+      tx.oncomplete = () => resolve();
+      tx.onerror    = e => reject(e.target.error);
+      tx.onabort    = e => reject(e.target.error);
     });
   },
 };
