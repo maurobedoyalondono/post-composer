@@ -5,6 +5,7 @@ import { exportPackage } from './exporter.js';
 import { slugify, PLATFORMS, TONES } from './constants.js';
 import { router }       from '../core/router.js';
 import { storage }      from '../core/storage.js';
+import { imageStore }   from '../core/image-store.js';
 
 /**
  * Mount the Project Manager into #manager-view.
@@ -39,7 +40,12 @@ export function mountManager(state) {
       const toneLabel     = tone ? tone.label : brief.tone;
       const slug = slugify(brief.title);
       try {
-        await exportPackage(brief, brief.imageMeta ?? [], platformLabel, toneLabel, slug);
+        const storedImages  = await imageStore.load(brief.id);
+        const hydratedMeta  = (brief.imageMeta ?? []).map(m => ({
+          ...m,
+          dataUrl: storedImages[m.filename] ?? null,
+        }));
+        await exportPackage(brief, hydratedMeta, platformLabel, toneLabel, slug);
       } catch (err) {
         alert(`Export failed: ${err.message}`);
       }
