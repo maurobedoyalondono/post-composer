@@ -1,5 +1,6 @@
 // manager/brief-wizard.js
 import { storage } from '../core/storage.js';
+import { imageStore } from '../core/image-store.js';
 import { PLATFORMS, TONES, slugify, autoLabel } from './constants.js';
 
 // ---------------------------------------------------------------------------
@@ -337,13 +338,12 @@ export class BriefWizard {
       });
     }
 
-    // Persist images to pc_images_{id} (in addition to brief.imageMeta)
+    // Persist images to IndexedDB
     if (imageMeta.length > 0) {
       const imageMap = {};
       imageMeta.forEach(m => { if (m.dataUrl) imageMap[m.filename] = m.dataUrl; });
-      const failed = storage.saveImages(brief.id, imageMap);
-      if (failed.length > 0) {
-        console.warn('[BriefWizard] Image quota exceeded for:', failed);
+      if (Object.keys(imageMap).length > 0) {
+        await imageStore.save(brief.id, imageMap);
       }
     }
 
