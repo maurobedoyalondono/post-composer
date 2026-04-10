@@ -16,6 +16,7 @@ import { events }               from '../core/events.js';
 import { router }               from '../core/router.js';
 import { loadProjectFonts }     from '../shared/fonts.js';
 import { storage }              from '../core/storage.js';
+import { imageStore }           from '../core/image-store.js';
 import { showProjectDiffModal } from '../ui/modals/project-diff-modal.js';
 
 /**
@@ -183,13 +184,9 @@ export function mountEditor(state, projectStore) {
     if (state.project) state.loadedBriefId = state.activeBriefId;
 
     // ── Load images not already in state ──
-    const sources = [
-      ...(brief.imageMeta ?? [])
-        .filter(m => m.dataUrl)
-        .map(m => ({ filename: m.filename, src: m.dataUrl })),
-      ...Object.entries(storage.loadImages(state.activeBriefId))
-        .map(([filename, src]) => ({ filename, src })),
-    ];
+    const storedImages = await imageStore.load(state.activeBriefId);
+    const sources = Object.entries(storedImages)
+      .map(([filename, src]) => ({ filename, src }));
 
     const toLoad = sources.filter(({ filename }) => !state.images.has(filename));
     if (toLoad.length) {
@@ -310,9 +307,10 @@ export function mountEditor(state, projectStore) {
           const img = state.images.get(f.name);
           if (img?.src) imageMap[f.name] = img.src;
         });
-        const failed = storage.saveImages(state.activeBriefId, imageMap);
-        if (failed.length > 0) {
-          _showToast(`${failed.length} image(s) could not be saved (storage full): ${failed.join(', ')}`);
+        if (Object.keys(imageMap).length > 0) {
+          await imageStore.save(state.activeBriefId, imageMap).catch(err => {
+            _showToast(`Images could not be saved: ${err.message}`);
+          });
         }
       }
     } catch (err) {
