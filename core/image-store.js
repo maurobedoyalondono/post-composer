@@ -3,11 +3,11 @@ const DB_NAME    = 'pc_images_db';
 const DB_VERSION = 1;
 const STORE_NAME = 'images';
 
-let _db = null;
+let _dbPromise = null;
 
 function _open() {
-  if (_db) return Promise.resolve(_db);
-  return new Promise((resolve, reject) => {
+  if (_dbPromise) return _dbPromise;
+  _dbPromise = new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = e => {
       const db = e.target.result;
@@ -15,9 +15,10 @@ function _open() {
         db.createObjectStore(STORE_NAME, { keyPath: ['briefId', 'filename'] });
       }
     };
-    req.onsuccess = e => { _db = e.target.result; resolve(_db); };
-    req.onerror   = e => reject(e.target.error);
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror   = e => { _dbPromise = null; reject(e.target.error); };
   });
+  return _dbPromise;
 }
 
 export const imageStore = {
