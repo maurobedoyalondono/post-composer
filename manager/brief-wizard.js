@@ -338,12 +338,14 @@ export class BriefWizard {
       });
     }
 
-    // Persist images to IndexedDB
+    // Persist images to IndexedDB (best-effort — brief is already saved above)
     if (imageMeta.length > 0) {
       const imageMap = {};
       imageMeta.forEach(m => { if (m.dataUrl) imageMap[m.filename] = m.dataUrl; });
       if (Object.keys(imageMap).length > 0) {
-        await imageStore.save(brief.id, imageMap);
+        await imageStore.save(brief.id, imageMap).catch(err => {
+          console.warn('[BriefWizard] Image save to IndexedDB failed:', err);
+        });
       }
     }
 
