@@ -816,3 +816,47 @@
 .tb-danger:hover {
   background: rgba(239,68,68,0.15);
 }
+
+/* ── Thumbnail Strip (wizard + annotator) ── */
+.thumbnail-strip {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 8px 18px;
+  border-bottom: 1px solid var(--color-border);
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.thumbnail-strip-item {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--color-surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  transition: border-color 0.1s;
+}
+
+.thumbnail-strip-item:hover {
+  border-color: var(--color-accent-2);
+}
+
+.thumbnail-strip-item.is-active {
+  border-color: var(--color-accent);
+}
+
+.thumbnail-strip-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
