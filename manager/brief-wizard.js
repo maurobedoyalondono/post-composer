@@ -161,7 +161,11 @@ export class BriefWizard {
     if (this._step === 5) {
       this._nextBtn.disabled = true;
       try {
-        await this._transitionToAnnotation();
+        if (this._editId) {
+          await this._save();
+        } else {
+          await this._transitionToAnnotation();
+        }
       } catch (err) {
         const errorEl = this._bodyEl.querySelector('.wizard-error');
         if (errorEl) { errorEl.textContent = `Error: ${err.message}`; errorEl.hidden = false; }
@@ -183,7 +187,7 @@ export class BriefWizard {
     }
     this._indicatorEl.textContent = `Step ${this._step} of 5`;
     this._backBtn.hidden = (this._step === 1);
-    this._nextBtn.textContent = 'Next';
+    this._nextBtn.textContent = (this._step === 5 && this._editId) ? 'Save' : 'Next';
 
     switch (this._step) {
       case 1: this._renderStep1(); break;
