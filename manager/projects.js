@@ -24,6 +24,7 @@ export class ProjectList {
    * @param {BriefWizard} deps.wizard — the BriefWizard instance
    * @param {Function}    deps.onOpenEditor         — called with briefId when user clicks "Open in Editor"
    * @param {Function}    deps.onExport             — called with brief when user clicks "Export Package"
+   * @param {Function}    [deps.onManageImages]     — called with briefId when user clicks "Manage Images"
    * @param {Function}    [deps.getCurrentProjectId] — returns the currently open project ID (or null)
    * @param {Function}    [deps.onProjectDeleted]   — called with the deleted project ID
    */
@@ -75,10 +76,11 @@ export class ProjectList {
           <span>Updated ${formatDate(brief.updatedAt)}</span>
         </div>
         <div class="project-card-actions">
-          <button class="btn btn-primary btn-open"   data-id="${escHtml(brief.id)}">Open in Editor</button>
+          <button class="btn btn-primary btn-open"     data-id="${escHtml(brief.id)}">Open in Editor</button>
           <button class="btn btn-secondary btn-edit"   data-id="${escHtml(brief.id)}">Edit Brief</button>
+          <button class="btn btn-secondary btn-manage" data-id="${escHtml(brief.id)}">Manage Images</button>
           <button class="btn btn-secondary btn-export" data-id="${escHtml(brief.id)}">Export Package</button>
-          <button class="btn btn-danger btn-delete"  data-id="${escHtml(brief.id)}">Delete</button>
+          <button class="btn btn-danger btn-delete"    data-id="${escHtml(brief.id)}">Delete</button>
         </div>`;
 
       fragment.appendChild(card);
@@ -110,6 +112,11 @@ export class ProjectList {
         const fullBrief = storage.getBrief(id);
         if (fullBrief) {
           this.deps.wizard.openEdit(fullBrief);
+        }
+
+      } else if (btn.classList.contains('btn-manage')) {
+        if (this.deps.onManageImages) {
+          this.deps.onManageImages(id);
         }
 
       } else if (btn.classList.contains('btn-export')) {

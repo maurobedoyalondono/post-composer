@@ -1,6 +1,7 @@
 // manager/shell.js
-import { BriefWizard }  from './brief-wizard.js';
-import { ProjectList }  from './projects.js';
+import { BriefWizard }     from './brief-wizard.js';
+import { ProjectList }     from './projects.js';
+import { ImageAnnotator }  from './image-annotator.js';
 import { exportPackage } from './exporter.js';
 import { slugify, PLATFORMS, TONES } from './constants.js';
 import { router }       from '../core/router.js';
@@ -26,6 +27,10 @@ export function mountManager(state) {
     projectList.refresh();
   });
 
+  const annotatorHost = document.createElement('div');
+  root.appendChild(annotatorHost);
+  const annotator = new ImageAnnotator(annotatorHost);
+
   projectList = new ProjectList(listEl, {
     wizard,
     onOpenEditor: (briefId) => {
@@ -49,6 +54,9 @@ export function mountManager(state) {
       } catch (err) {
         alert(`Export failed: ${err.message}`);
       }
+    },
+    onManageImages: (briefId) => {
+      annotator.open(briefId);
     },
     getCurrentProjectId: () => state.activeBriefId,
     onProjectDeleted: (deletedId) => {
