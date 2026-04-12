@@ -45,35 +45,39 @@ export async function generateIndividualImages(imageMeta) {
 
   const MAX_SIDE = 1200;
   const pad = (n) => String(n).padStart(2, '0');
-  const entries = imageMeta.filter(e => e.dataUrl);
 
   const results = await Promise.all(
-    entries.map((entry, i) =>
-      new Promise(resolve => {
-        const img = new Image();
-        img.onload = async () => {
-          const { naturalWidth: w, naturalHeight: h } = img;
-          const scale = Math.min(1, MAX_SIDE / Math.max(w, h));
-          const dw = Math.round(w * scale);
-          const dh = Math.round(h * scale);
+    imageMeta
+      .map((entry, i) => ({ entry, i }))
+      .filter(({ entry }) => entry.dataUrl)
+      .map(({ entry, i }) =>
+        new Promise(resolve => {
+          const img = new Image();
+          img.onload = async () => {
+            const { naturalWidth: w, naturalHeight: h } = img;
+            const scale = Math.min(1, MAX_SIDE / Math.max(w, h));
+            const dw = Math.round(w * scale);
+            const dh = Math.round(h * scale);
 
-          const canvas = document.createElement('canvas');
-          canvas.width  = dw;
-          canvas.height = dh;
-          canvas.getContext('2d').drawImage(img, 0, 0, dw, dh);
+            const canvas = document.createElement('canvas');
+            canvas.width  = dw;
+            canvas.height = dh;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) { resolve(null); return; }
+            ctx.drawImage(img, 0, 0, dw, dh);
 
-          const tryBlob = (q) => new Promise(res => canvas.toBlob(res, 'image/jpeg', q));
-          let blob = await tryBlob(0.75);
-          if (blob && blob.size > 500_000) blob = await tryBlob(0.65);
+            const tryBlob = (q) => new Promise(res => canvas.toBlob(res, 'image/jpeg', q));
+            let blob = await tryBlob(0.75);
+            if (blob && blob.size > 500_000) blob = await tryBlob(0.65);
 
-          const idx  = pad(i + 1);
-          const name = `images/${idx}-${entry.label}.jpg`;
-          resolve(blob ? { name, blob } : null);
-        };
-        img.onerror = () => resolve(null);
-        img.src = entry.dataUrl;
-      })
-    )
+            const idx  = pad(i + 1);
+            const name = `images/${idx}-${entry.label}.jpg`;
+            resolve(blob ? { name, blob } : null);
+          };
+          img.onerror = () => resolve(null);
+          img.src = entry.dataUrl;
+        })
+      )
   );
 
   return results.filter(Boolean);
