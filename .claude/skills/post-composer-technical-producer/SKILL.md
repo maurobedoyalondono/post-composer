@@ -34,7 +34,7 @@ Generate the complete project JSON following this top-level structure:
     "title": "[PROJECT_TITLE]"
   },
   "export": {
-    "target": "[platform from creative brief]",
+    "target": "[platform from creative brief — must be one of: instagram-square, instagram-portrait, instagram-story, facebook-feed, facebook-cover, print-a4-portrait, print-a4-landscape, custom]",
     "width_px": [width],
     "height_px": [height]
   },
@@ -112,11 +112,17 @@ No failed items in the output file.
 
 ## Return protocol
 
-Present the JSON to the user: confirm frame count, sequence order, variety contract satisfied (list which checks passed), and that copy strings match the approved creative brief.
+Write the initial JSON to `[PROJECT_JSON_PATH]` immediately after completing it. Present the JSON to the user: confirm frame count, sequence order, variety contract satisfied (list which checks passed), and that copy strings match the approved creative brief.
 
-Iterate — fix any error, re-present — until approved.
+After each fix or revision the user requests: update `[PROJECT_JSON_PATH]` immediately, then re-present the relevant section. The file must always reflect the current state — never leave the file behind the conversation.
 
-Once approved:
+After presenting (initial or revised), end with the explicit question:
+
+> **"Do you approve this JSON? Shall I proceed to Step 5?"**
+
+Wait for an explicit approval response. Apply any fixes, update the file, re-present, and re-ask until the user gives a clear "approved", "yes, proceed", or equivalent.
+
+Once explicitly approved, confirm the file is saved and return:
 
 `STATUS: JSON COMPLETE`
 - Path: `[PROJECT_JSON_PATH]`

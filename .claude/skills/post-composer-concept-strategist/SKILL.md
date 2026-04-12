@@ -91,9 +91,17 @@ Once you have read all three inputs, write `[NARRATIVE_BRIEF_PATH]` with this ex
 
 ## Return protocol
 
-Present the narrative brief to the user. Iterate — revise structure, viewer journey, frame roles — until approved.
+Write the initial draft to `[NARRATIVE_BRIEF_PATH]` immediately after completing it. Present the brief to the user.
 
-Once approved, save to `[NARRATIVE_BRIEF_PATH]` and return:
+After each revision the user requests: update `[NARRATIVE_BRIEF_PATH]` immediately, then re-present the updated brief. The file must always reflect the current state — never leave the file behind the conversation.
+
+After presenting (initial or revised), end with the explicit question:
+
+> **"Do you approve this narrative brief? Shall I proceed to Step 2?"**
+
+Wait for an explicit approval response. Positive feedback about a specific element (e.g. "sequence is great") is NOT approval — apply the change, update the file, re-present, and re-ask the approval question. Only a clear "approved", "yes, proceed", or equivalent unblocks the next step.
+
+Once explicitly approved, confirm the file is saved and return:
 
 `STATUS: NARRATIVE BRIEF COMPLETE`
 - Path: `[NARRATIVE_BRIEF_PATH]`

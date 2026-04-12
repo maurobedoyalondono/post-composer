@@ -75,7 +75,7 @@ Dispatch `post-composer-concept-strategist` with:
 | `[INPUTS_PATH]` | `post-composer/projects/[PROJECT_SLUG]/inputs/` |
 | `[NARRATIVE_BRIEF_PATH]` | `post-composer/projects/[PROJECT_SLUG]/shared/narrative-brief.md` |
 
-**Approval gate:** Present the narrative brief — story, narrative structure, viewer journey, and approved frame sequence. Wait for user approval. If the user requests changes, re-dispatch the Concept Strategist with the specific revision request.
+**Approval gate:** The Concept Strategist will present its output and ask for explicit approval. Do not dispatch Step 2 until the user has given explicit approval (a clear "approved", "yes, proceed", or equivalent). Positive feedback about a specific element is NOT approval. If the user requests changes, re-dispatch the Concept Strategist with the specific revision request.
 
 ---
 
@@ -95,7 +95,7 @@ Dispatch `post-composer-creative-director` with:
 | `[INPUTS_PATH]` | `post-composer/projects/[PROJECT_SLUG]/inputs/` |
 | `[CREATIVE_BRIEF_PATH]` | `post-composer/projects/[PROJECT_SLUG]/shared/creative-brief.md` |
 
-**Approval gate:** Present the full concept — design tokens, variety contract (all 7 fields), and per-frame briefs with copy. Wait for user approval. Iterate until approved. The Creative Director saves `creative-brief.md` before returning `STATUS: CONCEPT APPROVED`.
+**Approval gate:** The Creative Director will present its output and ask for explicit approval. Do not dispatch Step 3 until the user has given explicit approval (a clear "approved", "yes, proceed", or equivalent). Positive feedback about a specific element is NOT approval. Iterate until the user explicitly approves the full concept.
 
 ---
 
@@ -115,7 +115,7 @@ Dispatch `post-composer-color-advisor` with:
 | `[INPUTS_PATH]` | `post-composer/projects/[PROJECT_SLUG]/inputs/` |
 | `[COLOR_OVERRIDES_PATH]` | `post-composer/projects/[PROJECT_SLUG]/shared/color-overrides.md` |
 
-**Approval gate:** Present `color-overrides.md`. This gate is typically brief — review any overrides for surprises before proceeding. Wait for user confirmation before Step 4.
+**Approval gate:** The Color Advisor will present its output and ask for explicit approval. Do not dispatch Step 4 until the user has given explicit approval. This gate is typically brief — but the user must still confirm before the pipeline continues.
 
 ---
 
@@ -136,7 +136,7 @@ Dispatch `post-composer-technical-producer` with:
 | `[INPUTS_PATH]` | `post-composer/projects/[PROJECT_SLUG]/inputs/` |
 | `[PROJECT_JSON_PATH]` | `post-composer/projects/[PROJECT_SLUG]/[PROJECT_SLUG].json` |
 
-**Approval gate:** Spot-check the JSON — confirm frame count, sequence matches the approved narrative brief, variety contract fields are present in the JSON, and every frame has `image_filename` set from `image-map.md` (never invented). Wait for user approval before Step 5.
+**Approval gate:** The Technical Producer will present its output and ask for explicit approval. Do not dispatch Step 5 until the user has given explicit approval. Spot-check: frame count, sequence matches the approved narrative brief, variety contract fields present, every `image_filename` sourced from `image-map.md`.
 
 ---
 

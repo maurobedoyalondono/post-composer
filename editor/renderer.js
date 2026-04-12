@@ -32,9 +32,22 @@ export class Renderer {
     ctx.fillStyle = frame.bg_color ?? project.design_tokens?.palette?.background ?? '#000000';
     ctx.fillRect(0, 0, w, h);
 
+    // Augment images map with label-based keys from image_index so that
+    // multi_image layer.src (descriptive_label) resolves the same as filename
+    let renderImages = images;
+    if (images && project.image_index?.length) {
+      renderImages = new Map(images);
+      for (const { label, filename } of project.image_index) {
+        if (!renderImages.has(label)) {
+          const img = images.get(filename);
+          if (img) renderImages.set(label, img);
+        }
+      }
+    }
+
     // Background photo — skipped in multi_image mode (image layers render themselves)
     if (!frame.multi_image) {
-      const bg = images?.get(frame.image_filename);
+      const bg = renderImages?.get(frame.image_filename);
       if (bg) _drawCoverImage(ctx, bg, w, h);
     }
 
@@ -42,7 +55,7 @@ export class Renderer {
     const globals = project.globals ?? {};
     for (const layer of (frame.layers ?? [])) {
       if (layer.hidden) continue;
-      renderLayer(ctx, layer, w, h, images, globals);
+      renderLayer(ctx, layer, w, h, renderImages, globals);
     }
 
     // Layer-bounds overlay (all layers)

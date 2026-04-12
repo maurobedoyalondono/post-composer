@@ -27,6 +27,16 @@ In this order:
 
 ## Series-level decisions
 
+### Language
+
+Before writing any copy strings, ask the user:
+
+> **"What language should all copy strings be written in?"**
+
+Wait for the answer. Do not default to English. All eyebrows, headlines, captions, stat labels, and any other copy in the per-frame briefs must be written in the confirmed language. Proper nouns (place names, species names) follow standard usage for that language.
+
+---
+
 ### Design tokens
 
 Define the four palette colors — editorial choices that hold up as text and shapes placed on top of photographs. These are not extracted from the photos.
@@ -85,6 +95,12 @@ For each frame in the approved sequence:
 
 Text carries what is invisible: time, meaning, consequence, scale. If the image is complete without text — silence. If text adds something specific — write it.
 
+**Flat text rule (non-negotiable):** Never write copy that could appear on any photograph. Generic closing statements, philosophical observations about nature, time, or the land — these are flat text. They add nothing a different image couldn't carry equally well. Test every string: would this sentence mean anything different on a completely different photograph? If yes — it is flat. Rewrite it as a specific fact, or choose silence.
+
+**Closing frames:** Never assume a closing frame should be silent, and never assume it should have text. Read the full series arc and write copy that is earned by the journey — something that connects back to what came before or names what this moment specifically means in context. If you cannot find that specific connection, ask the photographer before defaulting to either silence or a generic closing statement.
+
+**When in doubt, ask the photographer.** If you cannot find a specific, earned string for a frame — ask what that image means to them before assuming.
+
 For each frame state:
 - **Pattern:** which composition pattern
 - **Zone:** which zone (from variety contract)
@@ -93,6 +109,15 @@ For each frame state:
 - **Overlay treatment:** gradient direction | solid | none (read the image at the text zone)
 - **Shape:** what shape, what role, or "none — [reason]"
 - **Accent:** yes/no
+
+**Multi-image frames (additional required fields):**
+
+When a frame uses `multi_image: true`, read ai-manual.md Section 3 (Multi-Image Compositing) fully before writing the brief. The per-frame brief must additionally declare:
+
+- **Compositing strategy:** split-panel / foreground inset / transparency composite — and why it serves the editorial idea
+- **bg_color:** recommended `palette.background`. State reason if different
+- **Border treatment:** whether image layers use `border.enabled` and, if so, `border.color` — this is an editorial choice, not a default. Borders add frame/separation between images and the background; omit when the images should bleed into the background
+- **Text zone placement:** for each text element, state whether it lands in a bg_color margin area (between/outside image panels) or overlaps an image panel. If overlapping a panel, name which image and describe the zone luminance
 
 ---
 
@@ -114,9 +139,17 @@ Replace failing strings — do not flag and defer.
 
 ## Return protocol
 
-Present the full concept to the user — design tokens, variety contract, and all per-frame briefs with reviewed copy. Iterate until approved.
+Write the initial concept to `[CREATIVE_BRIEF_PATH]` immediately after completing it. Present the full concept to the user — design tokens, variety contract, and all per-frame briefs with reviewed copy.
 
-Once approved, save the full concept summary to `[CREATIVE_BRIEF_PATH]`, then return:
+After each revision the user requests: update `[CREATIVE_BRIEF_PATH]` immediately, then re-present the affected section. The file must always reflect the current state — never leave the file behind the conversation.
+
+After presenting (initial or revised), end with the explicit question:
+
+> **"Do you approve this concept? Shall I proceed to Step 3?"**
+
+Wait for an explicit approval response. Positive feedback about a specific element is NOT approval — apply the change, update the file, re-present, and re-ask the approval question. Only a clear "approved", "yes, proceed", or equivalent unblocks the next step.
+
+Once explicitly approved, confirm the file is saved and return:
 
 `STATUS: CONCEPT APPROVED`
 

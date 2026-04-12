@@ -155,7 +155,7 @@ export function mountEditor(state, projectStore) {
         console.warn('[shell] Stored project corrupt (parse error):', e);
         storage.deleteProject(state.activeBriefId);
         storage.savePrefs({ ...storage.getPrefs(), lastBriefId: null });
-        _showToast('Project could not be restored — data was invalid.');
+        _showToast('Project could not be restored — data was invalid.', 'error');
         router.navigate('manager');
         return;
       }
@@ -169,7 +169,7 @@ export function mountEditor(state, projectStore) {
           console.warn('[shell] Stored project corrupt:', e);
           storage.deleteProject(state.activeBriefId);
           storage.savePrefs({ ...storage.getPrefs(), lastBriefId: null });
-          _showToast('Project could not be restored — data was invalid.');
+          _showToast('Project could not be restored — data was invalid.', 'error');
           router.navigate('manager');
           return;
         }
@@ -235,7 +235,7 @@ export function mountEditor(state, projectStore) {
     try {
       data = JSON.parse(await file.text());
     } catch (err) {
-      _showToast(`Invalid JSON file: ${err.message}`);
+      _showToast(`Invalid JSON file: ${err.message}`, 'error');
       return;
     }
 
@@ -275,7 +275,7 @@ export function mountEditor(state, projectStore) {
         projectStore.flush();
       });
     } catch (err) {
-      _showToast(`Failed to load file: ${err.message}`);
+      _showToast(`Failed to load file: ${err.message}`, 'error');
     }
   });
 
@@ -309,12 +309,12 @@ export function mountEditor(state, projectStore) {
         });
         if (Object.keys(imageMap).length > 0) {
           await imageStore.save(state.activeBriefId, imageMap).catch(err => {
-            _showToast(`Images could not be saved: ${err.message}`);
+            _showToast(`Images could not be saved: ${err.message}`, 'error');
           });
         }
       }
     } catch (err) {
-      _showToast(`Image load error: ${err.message}`);
+      _showToast(`Image load error: ${err.message}`, 'error');
     }
   });
 
@@ -464,22 +464,35 @@ export function mountEditor(state, projectStore) {
     if (!filename || !state.images.has(filename)) return;
     const frame = state.activeFrame;
     if (frame.multi_image) {
-      // Stack a new image layer at full size — user resizes from here
-      const newLayer = {
-        id:         `img-${Date.now()}`,
-        type:       'image',
-        src:        filename,
-        position:   { zone: 'absolute', x_pct: 0, y_pct: 0 },
-        width_pct:  100,
-        height_pct: 100,
-        fit:        'cover',
-        opacity:    1,
-      };
-      frame.layers = frame.layers ?? [];
-      // Insert after overlays, before text/shape layers
-      const lastOverlayIdx = frame.layers.reduce((last, l, i) => l.type === 'overlay' ? i : last, -1);
-      frame.layers.splice(lastOverlayIdx + 1, 0, newLayer);
-      layerManager.selectLayer(newLayer.id);
+      // Resolve filename to label if possible (image_index lookup)
+      const indexEntry = (state.project.image_index ?? []).find(i => i.filename === filename);
+      const srcValue   = indexEntry ? indexEntry.label : filename;
+
+      // If an image layer is already selected, link the image to it
+      const selectedLayer = state.selectedLayerId
+        ? (frame.layers ?? []).find(l => l.id === state.selectedLayerId && l.type === 'image')
+        : null;
+
+      if (selectedLayer) {
+        selectedLayer.src = srcValue;
+      } else {
+        // No image layer selected — stack a new image layer at full size
+        const newLayer = {
+          id:         `img-${Date.now()}`,
+          type:       'image',
+          src:        srcValue,
+          position:   { zone: 'absolute', x_pct: 0, y_pct: 0 },
+          width_pct:  100,
+          height_pct: 100,
+          fit:        'cover',
+          opacity:    1,
+        };
+        frame.layers = frame.layers ?? [];
+        // Insert after overlays, before text/shape layers
+        const lastOverlayIdx = frame.layers.reduce((last, l, i) => l.type === 'overlay' ? i : last, -1);
+        frame.layers.splice(lastOverlayIdx + 1, 0, newLayer);
+        layerManager.selectLayer(newLayer.id);
+      }
     } else {
       // Existing behaviour — replace background image
       frame.image_filename = filename;
@@ -541,17 +554,37 @@ function _showBanner(root, msg) {
   banner.hidden = false;
 }
 
-function _showToast(msg, duration = 5000) {
+function _showToast(msg, type = 'info') {
+  const isError = type === 'error';
   const toast = document.createElement('div');
-  toast.textContent = msg;
   toast.style.cssText = [
     'position:fixed', 'bottom:24px', 'left:50%', 'transform:translateX(-50%)',
-    'z-index:9999', 'background:#1e293b', 'color:#e2e8f0',
-    'padding:10px 18px', 'border-radius:6px', 'font-size:13px',
-    'box-shadow:0 4px 16px rgba(0,0,0,0.5)', 'pointer-events:none',
+    'z-index:9999', `background:${isError ? '#7f1d1d' : '#1e293b'}`,
+    `color:${isError ? '#fecaca' : '#e2e8f0'}`,
+    'padding:10px 14px 10px 18px', 'border-radius:6px', 'font-size:13px',
+    'box-shadow:0 4px 16px rgba(0,0,0,0.5)',
+    'display:flex', 'align-items:flex-start', 'gap:12px', 'max-width:520px',
   ].join(';');
+
+  const text = document.createElement('span');
+  text.style.cssText = 'flex:1;white-space:pre-wrap;word-break:break-word;line-height:1.5';
+  text.textContent = msg;
+
+  const close = document.createElement('button');
+  close.textContent = '×';
+  close.style.cssText = [
+    'background:none', 'border:none', 'cursor:pointer', 'font-size:18px',
+    'line-height:1', 'padding:0', 'flex-shrink:0', 'margin-top:-1px',
+    `color:${isError ? '#fca5a5' : '#94a3b8'}`,
+  ].join(';');
+  close.addEventListener('click', () => toast.remove());
+
+  toast.appendChild(text);
+  toast.appendChild(close);
   document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), duration);
+
+  // Info toasts auto-dismiss; error toasts stay until manually closed
+  if (!isError) setTimeout(() => toast.remove(), 5000);
 }
 
 function _buildHTML() {

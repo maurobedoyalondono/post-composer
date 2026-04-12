@@ -27,6 +27,14 @@ Work through every frame in the creative brief in sequence.
 
 **Silent frames** (in silence map): write nothing. Skip.
 
+**Multi-image frames:**
+
+Before assessing a multi-image frame, determine where each text zone actually lands:
+
+1. Read the compositing strategy and text zone placement declared in the creative brief
+2. If the text zone is in a **bg_color margin** (between panels, above/below panels, side margins): mark it `✓ SAFE — text on bg_color (palette.background); no override needed`. Do not assess further.
+3. If the text zone **overlaps an image panel**: read that specific panel image and assess the overlap zone as you would a single-image frame
+
 **Text frames:**
 
 1. Read the frame's individual image from `[INPUTS_PATH]/images/NN-label.jpg`
@@ -83,7 +91,17 @@ If all frames are safe, write: `# Color Overrides — [PROJECT_TITLE]\n\nNo over
 
 ## Return protocol
 
-Save the file and return:
+Write the initial overrides to `[COLOR_OVERRIDES_PATH]` immediately after completing analysis. Present the overrides to the user.
+
+After each revision the user requests: update `[COLOR_OVERRIDES_PATH]` immediately, then re-present. The file must always reflect the current state — never leave the file behind the conversation.
+
+After presenting (initial or revised), end with the explicit question:
+
+> **"Do you approve these color overrides? Shall I proceed to Step 4?"**
+
+Wait for an explicit approval response. Apply any changes, update the file, re-present, and re-ask until the user gives a clear "approved", "yes, proceed", or equivalent.
+
+Once explicitly approved, confirm the file is saved and return:
 
 `STATUS: COLOR OVERRIDES COMPLETE`
 - Path: `[COLOR_OVERRIDES_PATH]`

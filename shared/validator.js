@@ -168,21 +168,24 @@ function _enforceVarietyContract(project, err) {
     f.layers?.some(l => l.type === 'text' || l.type === 'stats_block')
   );
 
-  // Zone distribution
-  const zoneCounts = {};
+  // Zone distribution — count frames per zone (not individual layers)
+  const zoneFrameCounts = {};
   for (const frame of textFrames) {
+    const zonesInFrame = new Set();
     for (const layer of (frame.layers ?? [])) {
       if ((layer.type === 'text' || layer.type === 'stats_block') && layer.position?.zone) {
-        const z = layer.position.zone;
-        zoneCounts[z] = (zoneCounts[z] ?? 0) + 1;
+        zonesInFrame.add(layer.position.zone);
       }
+    }
+    for (const z of zonesInFrame) {
+      zoneFrameCounts[z] = (zoneFrameCounts[z] ?? 0) + 1;
     }
   }
   if (textFrames.length > 0) {
     const maxAllowed = Math.ceil(textFrames.length * (vc.zone_max_usage_pct / 100));
-    for (const [zone, count] of Object.entries(zoneCounts)) {
+    for (const [zone, count] of Object.entries(zoneFrameCounts)) {
       if (count > maxAllowed)
-        err(`variety_contract: zone "${zone}" used ${count} times but max allowed is ${maxAllowed} (${vc.zone_max_usage_pct}% of ${textFrames.length} text frames)`);
+        err(`variety_contract: zone "${zone}" used on ${count} frames but max allowed is ${maxAllowed} (${vc.zone_max_usage_pct}% of ${textFrames.length} text frames)`);
     }
   }
 

@@ -1,0 +1,11 @@
+Post-Composer Project Brief
+===========================
+Title:    Santander
+Platform: Instagram Portrait
+Tone:     Documentary
+Story:
+  Journey through Santander Colombia, its canyons, rivers, churches, towns, landscapes
+
+Images: 23
+Created:  2026-04-09T20:33:06.264Z
+Updated:  2026-04-12T14:36:06.915Z
