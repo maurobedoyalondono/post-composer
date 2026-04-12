@@ -63,7 +63,11 @@ export const storage = {
   saveBrief(brief) {
     const now = Date.now();
     const { id, title, platform, tone, imageMeta } = brief;
-    const slimMeta = (imageMeta ?? []).map(({ filename, label }) => ({ filename, label }));
+    const slimMeta = (imageMeta ?? []).map(({ filename, label, annotation }) => ({
+      filename,
+      label,
+      ...(annotation ? { annotation } : {}),
+    }));
     localStorage.setItem(KEYS.brief(id), JSON.stringify({ ...brief, imageMeta: slimMeta, updatedAt: now }));
     const index = this._readBriefIndex();
     const existing = index.findIndex(b => b.id === id);

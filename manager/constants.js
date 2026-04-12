@@ -17,6 +17,15 @@ export const TONES = [
   { id: 'ai-decides',  label: 'AI decides' },
 ];
 
+export const ROLES = [
+  { id: '',           label: '(none)' },
+  { id: 'opening',    label: 'Opening' },
+  { id: 'closing',    label: 'Closing' },
+  { id: 'anchor',     label: 'Anchor' },
+  { id: 'transition', label: 'Transition' },
+  { id: 'silent',     label: 'Silent' },
+];
+
 /**
  * Convert a project title to a URL-safe slug.
  * 'Canyon Series 2026' → 'canyon-series-2026'
