@@ -112,78 +112,46 @@ export function generateProjectBrief(brief, platformLabel, toneLabel) {
 }
 
 /**
- * Render image grid to a canvas and return as a Blob.
- * @param {Array<{filename: string, label: string, dataUrl: string}>} imageMeta
- * @returns {Promise<Blob|null>}
+ * Generate self-contained external brief for external AI models.
+ * Fetches docs/ai-manual.md via HTTP (app must be served via live-server).
+ * @param {object} brief
+ * @param {Array}  imageMeta — with annotation fields
+ * @param {string} platformLabel
+ * @param {string} toneLabel
+ * @returns {Promise<string>}
  */
-export async function generateImageSheet(imageMeta) {
-  if (!imageMeta || imageMeta.length === 0) {
-    return null;
-  }
+export async function generateExternalBrief(brief, imageMeta, platformLabel, toneLabel) {
+  const imageMapContent = generateImageMap(imageMeta, brief.title);
 
-  // Filter to entries that actually have a dataUrl
-  const entries = imageMeta.filter(entry => entry.dataUrl);
-  if (entries.length === 0) {
-    return null;
-  }
+  let manualContent = '[ai-manual.md could not be loaded — attach manually]';
+  try {
+    const res = await fetch('../docs/ai-manual.md');
+    if (res.ok) manualContent = await res.text();
+  } catch { /* silent — fallback message is already set */ }
 
-  const CELL      = 300;
-  const MAX_COLS  = 4;
-  const COLS      = Math.min(entries.length, MAX_COLS);
-  const ROWS      = Math.ceil(entries.length / MAX_COLS);
-  const canvas    = document.createElement('canvas');
-  canvas.width    = COLS * CELL;
-  canvas.height   = ROWS * CELL;
-  const ctx       = canvas.getContext('2d');
-
-  // Load all images (resolve even on error so we draw every cell)
-  const images = await Promise.all(
-    entries.map(
-      (entry, index) =>
-        new Promise(resolve => {
-          const img = new Image();
-          img.onload  = () => resolve({ img, index });
-          img.onerror = () => resolve({ img: null, index });
-          img.src = entry.dataUrl;
-        })
-    )
+  return (
+    `# External Brief — ${brief.title}\n\n` +
+    `## Project\n` +
+    `- **Title:** ${brief.title}\n` +
+    `- **Platform:** ${platformLabel}\n` +
+    `- **Tone:** ${toneLabel}\n` +
+    `- **Story:** ${brief.story ?? ''}\n\n` +
+    `---\n\n` +
+    `## Image Map\n\n` +
+    `${imageMapContent}\n` +
+    `---\n\n` +
+    `## AI Design Manual\n\n` +
+    `${manualContent}\n`
   );
-
-  for (const { img, index } of images) {
-    const col = index % MAX_COLS;
-    const row = Math.floor(index / MAX_COLS);
-    const x   = col * CELL;
-    const y   = row * CELL;
-
-    if (!img) {
-      // Failed to load — fill with dark gray
-      ctx.fillStyle = '#333333';
-      ctx.fillRect(x, y, CELL, CELL);
-      continue;
-    }
-
-    // Cover-crop: scale to fill the cell, centering the image
-    const scale  = Math.max(CELL / img.naturalWidth, CELL / img.naturalHeight);
-    const sw     = CELL / scale;           // source width  in image pixels
-    const sh     = CELL / scale;           // source height in image pixels
-    const sx     = (img.naturalWidth  - sw) / 2;
-    const sy     = (img.naturalHeight - sh) / 2;
-
-    ctx.drawImage(img, sx, sy, sw, sh, x, y, CELL, CELL);
-  }
-
-  return new Promise(resolve => {
-    canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.85);
-  });
 }
 
 /**
  * Build and trigger download of the ZIP package.
- * @param {object} brief         — full brief from storage
- * @param {Array}  imageMeta     — same as above (with dataUrls)
+ * @param {object} brief
+ * @param {Array}  imageMeta — with dataUrls hydrated from IndexedDB
  * @param {string} platformLabel
  * @param {string} toneLabel
- * @param {string} slug          — filename-safe project slug (no extension)
+ * @param {string} slug
  * @returns {Promise<void>}
  */
 export async function exportPackage(brief, imageMeta, platformLabel, toneLabel, slug) {
@@ -192,21 +160,22 @@ export async function exportPackage(brief, imageMeta, platformLabel, toneLabel, 
 
   const zip = new window.JSZip();
 
-  // Add text files
-  zip.file('image-map.md',       generateImageMap(imageMeta));
-  zip.file('project-brief.txt',  generateProjectBrief(brief, platformLabel, toneLabel));
+  zip.file('project-brief.txt', generateProjectBrief(brief, platformLabel, toneLabel));
+  zip.file('image-map.md',      generateImageMap(imageMeta, brief.title));
 
-  // Optionally add the image sheet
-  const imageBlob = await generateImageSheet(imageMeta);
-  if (imageBlob !== null) {
-    zip.file('image-sheet.jpg', imageBlob);
+  const [externalBrief, individualImages] = await Promise.all([
+    generateExternalBrief(brief, imageMeta, platformLabel, toneLabel),
+    generateIndividualImages(imageMeta),
+  ]);
+
+  zip.file('external-brief.md', externalBrief);
+  for (const { name, blob } of individualImages) {
+    zip.file(name, blob);
   }
 
-  // Generate the ZIP blob and trigger download
   const zipBlob = await zip.generateAsync({ type: 'blob' });
-
   const url = URL.createObjectURL(zipBlob);
-  const a   = document.createElement('a');
+  const a = document.createElement('a');
   a.href     = url;
   a.download = `${slug}.zip`;
   a.click();
