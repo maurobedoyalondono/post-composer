@@ -928,3 +928,177 @@
   accent-color: var(--color-accent);
   cursor: pointer;
 }
+
+/* ── Image Annotator Panel ── */
+.image-annotator {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+  padding: 0;
+  max-width: 560px;
+  width: 92vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7);
+  font-family: var(--font-sans);
+}
+
+.image-annotator::backdrop {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.annotator-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  background: var(--color-surface);
+  z-index: 1;
+}
+
+.annotator-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.annotator-close {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  transition: color 0.1s, background 0.1s;
+}
+
+.annotator-close:hover {
+  color: var(--color-text);
+  background: var(--color-surface-2);
+}
+
+.annotator-strip-host {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.annotator-body {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.annotator-image-meta {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.annotator-preview {
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+  display: block;
+}
+
+.annotator-no-preview {
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  background: var(--color-surface-2);
+  border-radius: var(--radius-sm);
+}
+
+.annotator-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.annotator-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.annotator-field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  flex: 1;
+}
+
+.annotator-field-label select {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  padding: 5px 8px;
+}
+
+.annotator-textarea {
+  width: 100%;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  padding: 6px 8px;
+  resize: vertical;
+  min-height: 70px;
+  transition: border-color 0.1s;
+}
+
+.annotator-textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.annotator-input {
+  width: 100%;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  padding: 6px 8px;
+  transition: border-color 0.1s;
+}
+
+.annotator-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.annotator-silent-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  padding-bottom: 2px;
+}
+
+.annotator-silent-label input[type="checkbox"] {
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
