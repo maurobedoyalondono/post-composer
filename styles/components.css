@@ -860,3 +860,71 @@
   object-fit: cover;
   display: block;
 }
+
+/* ── Wizard Annotation Phase ── */
+.wizard-strip-host {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.wizard-annotation-meta {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+}
+
+.wizard-annotation-preview {
+  width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.wizard-annotation-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wizard-annotation-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.wizard-annotation-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  flex: 1;
+}
+
+.wizard-annotation-label select {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  padding: 5px 8px;
+}
+
+.wizard-annotation-silent {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.wizard-annotation-silent input[type="checkbox"] {
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}

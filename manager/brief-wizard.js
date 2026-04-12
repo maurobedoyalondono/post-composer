@@ -2,6 +2,8 @@
 import { storage } from '../core/storage.js';
 import { imageStore } from '../core/image-store.js';
 import { PLATFORMS, TONES, slugify, autoLabel } from './constants.js';
+import { ROLES } from './constants.js';
+import { ThumbnailStrip } from './thumbnail-strip.js';
 
 // ---------------------------------------------------------------------------
 // Helper: read a FileList as data URLs
@@ -43,6 +45,7 @@ export class BriefWizard {
         <span class="wizard-step-indicator">Step 1 of 5</span>
         <button class="wizard-close" aria-label="Close">&#x2715;</button>
       </div>
+      <div class="wizard-strip-host" hidden></div>
       <div class="wizard-body"></div>
       <div class="wizard-footer">
         <button class="wizard-back">Back</button>
@@ -57,6 +60,10 @@ export class BriefWizard {
     this._backBtn     = this._dialog.querySelector('.wizard-back');
     this._nextBtn     = this._dialog.querySelector('.wizard-next');
     this._closeBtn    = this._dialog.querySelector('.wizard-close');
+    this._stripHostEl     = this._dialog.querySelector('.wizard-strip-host');
+    this._annotating      = false;
+    this._annotationIndex = 0;
+    this._strip           = null;
 
     // Wire static buttons
     this._closeBtn.addEventListener('click', () => this._dialog.close());
@@ -71,6 +78,10 @@ export class BriefWizard {
     this._editId = null;
     this._data   = {};
     this._step   = 1;
+    this._annotating      = false;
+    this._annotationIndex = 0;
+    this._strip           = null;
+    this._stripHostEl.hidden = true;
     this._renderStep();
     this._dialog.showModal();
   }
@@ -90,6 +101,10 @@ export class BriefWizard {
       imageMeta:  brief.imageMeta  ?? [],
       createdAt:  brief.createdAt  ?? Date.now(),
     };
+    this._annotating      = false;
+    this._annotationIndex = 0;
+    this._strip           = null;
+    this._stripHostEl.hidden = true;
     this._step = 1;
     this._renderStep();
     this._dialog.showModal();
@@ -98,6 +113,15 @@ export class BriefWizard {
   // ── Navigation ────────────────────────────────────────────────────────────
 
   _goBack() {
+    if (this._annotating) {
+      if (this._annotationIndex > 0) {
+        this._captureAnnotation();
+        this._annotationIndex--;
+        this._strip.select(this._annotationIndex);
+        this._renderAnnotation();
+      }
+      return;
+    }
     if (this._step <= 1) return;
     this._captureStep();   // save current field value without validating
     this._step -= 1;
@@ -105,16 +129,42 @@ export class BriefWizard {
   }
 
   async _goNext() {
+    // ── Annotation mode ──────────────────────────────────────────────────
+    if (this._annotating) {
+      this._captureAnnotation();
+
+      if (this._annotationIndex < this._data.imageMeta.length - 1) {
+        this._annotationIndex++;
+        this._strip.select(this._annotationIndex);
+        this._renderAnnotation();
+      } else {
+        // All images annotated — save
+        this._nextBtn.disabled = true;
+        try {
+          await this._save();
+        } catch (err) {
+          const errorEl = document.createElement('div');
+          errorEl.className = 'wizard-error';
+          errorEl.textContent = `Save failed: ${err.message}`;
+          this._bodyEl.appendChild(errorEl);
+        } finally {
+          this._nextBtn.disabled = false;
+        }
+      }
+      return;
+    }
+
+    // ── Normal wizard steps ───────────────────────────────────────────────
     if (!this._validateStep()) return;
     this._captureStep();
 
     if (this._step === 5) {
       this._nextBtn.disabled = true;
       try {
-        await this._save();
+        await this._transitionToAnnotation();
       } catch (err) {
         const errorEl = this._bodyEl.querySelector('.wizard-error');
-        if (errorEl) this._showError(errorEl, `Save failed: ${err.message}`);
+        if (errorEl) { errorEl.textContent = `Error: ${err.message}`; errorEl.hidden = false; }
       } finally {
         this._nextBtn.disabled = false;
       }
@@ -127,6 +177,10 @@ export class BriefWizard {
   // ── Step rendering ────────────────────────────────────────────────────────
 
   _renderStep() {
+    if (this._annotating) {
+      this._renderAnnotation();
+      return;
+    }
     this._indicatorEl.textContent = `Step ${this._step} of 5`;
     this._backBtn.hidden = (this._step === 1);
     this._nextBtn.textContent = (this._step === 5) ? 'Save' : 'Next';
@@ -291,6 +345,101 @@ export class BriefWizard {
         break;
     }
     return true;
+  }
+
+  // ── Annotation transition ──────────────────────────────────────────────────
+
+  async _transitionToAnnotation() {
+    const fileInput = this._bodyEl.querySelector('input[type="file"]');
+    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+      this._data.imageMeta = await readFiles(fileInput.files);
+    }
+
+    const images = this._data.imageMeta ?? [];
+    if (images.length === 0) {
+      // No images — save directly
+      await this._save();
+      return;
+    }
+
+    // Enter annotation mode
+    this._annotating      = true;
+    this._annotationIndex = 0;
+
+    this._strip = new ThumbnailStrip(images, (i) => {
+      this._captureAnnotation();
+      this._annotationIndex = i;
+      this._renderAnnotation();
+    });
+
+    this._stripHostEl.innerHTML = '';
+    this._stripHostEl.appendChild(this._strip.el);
+    this._stripHostEl.hidden = false;
+
+    this._renderAnnotation();
+  }
+
+  _renderAnnotation() {
+    const images = this._data.imageMeta ?? [];
+    const total  = images.length;
+    const entry  = images[this._annotationIndex] ?? {};
+    const ann    = entry.annotation ?? {};
+
+    this._indicatorEl.textContent = `Image ${this._annotationIndex + 1} of ${total}`;
+    this._backBtn.hidden = false;
+    this._nextBtn.textContent = (this._annotationIndex === total - 1) ? 'Save' : 'Next';
+
+    const roleOptions = ROLES.map(r =>
+      `<option value="${r.id}" ${ann.role === r.id ? 'selected' : ''}>${r.label}</option>`
+    ).join('');
+
+    this._bodyEl.innerHTML = `
+      <div class="wizard-annotation-meta">${entry.filename ?? ''} · ${entry.label ?? ''}</div>
+      ${entry.dataUrl
+        ? `<img class="wizard-annotation-preview" src="${entry.dataUrl}" alt="${entry.label ?? ''}">`
+        : ''}
+      <div class="wizard-annotation-fields">
+        <div class="wizard-annotation-row">
+          <label class="wizard-annotation-label">Role
+            <select class="ann-role">${roleOptions}</select>
+          </label>
+          <label class="wizard-annotation-silent">
+            <input type="checkbox" class="ann-silent" ${ann.silent ? 'checked' : ''}>
+            Silent (no text overlay)
+          </label>
+        </div>
+        <label class="wizard-annotation-label">Notes
+          <textarea class="wizard-textarea ann-notes" rows="2" placeholder="Why this image matters, photographer intent...">${ann.notes ?? ''}</textarea>
+        </label>
+        <label class="wizard-annotation-label">Story
+          <textarea class="wizard-textarea ann-story" rows="2" placeholder="How/when captured, context...">${ann.story ?? ''}</textarea>
+        </label>
+        <label class="wizard-annotation-label">Stats
+          <input type="text" class="wizard-input ann-stats" placeholder="Any data or numbers to feature..." value="${ann.stats ?? ''}">
+        </label>
+      </div>
+    `;
+
+    // Auto-check silent when role = 'silent'
+    const roleEl   = this._bodyEl.querySelector('.ann-role');
+    const silentEl = this._bodyEl.querySelector('.ann-silent');
+    roleEl.addEventListener('change', () => {
+      if (roleEl.value === 'silent') silentEl.checked = true;
+    });
+  }
+
+  _captureAnnotation() {
+    const images = this._data.imageMeta ?? [];
+    const entry  = images[this._annotationIndex];
+    if (!entry) return;
+
+    entry.annotation = {
+      role:   this._bodyEl.querySelector('.ann-role')?.value   ?? '',
+      silent: this._bodyEl.querySelector('.ann-silent')?.checked ?? false,
+      notes:  this._bodyEl.querySelector('.ann-notes')?.value  ?? '',
+      story:  this._bodyEl.querySelector('.ann-story')?.value  ?? '',
+      stats:  this._bodyEl.querySelector('.ann-stats')?.value  ?? '',
+    };
   }
 
   // ── Save ──────────────────────────────────────────────────────────────────
