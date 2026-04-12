@@ -427,23 +427,25 @@ export class BriefWizard {
       </div>
     `;
 
-    this._bodyEl.querySelector('.btn-keep-existing').addEventListener('click', async () => {
-      this._nextBtn.hidden = false;
-      this._backBtn.hidden = false;
+    this._bodyEl.querySelector('.btn-keep-existing').addEventListener('click', async (e) => {
+      e.currentTarget.disabled = true;
       // Keep existing — load dataUrls from IndexedDB
       const stored = await imageStore.load(this._editId);
       this._data.imageMeta = (this._data.imageMeta ?? []).map(m => ({
         ...m,
         dataUrl: stored[m.filename] ?? null,
       }));
+      this._nextBtn.hidden = false;
+      this._backBtn.hidden = false;
       await this._enterAnnotationMode();
     });
 
-    this._bodyEl.querySelector('.btn-replace-all').addEventListener('click', async () => {
-      this._nextBtn.hidden = false;
-      this._backBtn.hidden = false;
+    this._bodyEl.querySelector('.btn-replace-all').addEventListener('click', async (e) => {
+      e.currentTarget.disabled = true;
       // Replace — use new images
       this._data.imageMeta = newImages;
+      this._nextBtn.hidden = false;
+      this._backBtn.hidden = false;
       await this._enterAnnotationMode();
     });
   }
