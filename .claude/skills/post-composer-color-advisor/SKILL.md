@@ -17,7 +17,7 @@ Your output is `color-overrides.md` — a short file containing only corrections
 ## Read before anything else
 
 1. **`[CREATIVE_BRIEF_PATH]`** — palette hex codes and roles, per-frame zone and text layer specs, silence map.
-2. **`[INPUTS_PATH]/image-sheet.jpg`** — the thumbnail grid. You will assess text zones from these thumbnails.
+2. **Individual image files in `[INPUTS_PATH]/images/`** — named `01-label.jpg`, `02-label.jpg`, etc. Read each frame's file directly to assess its text zone.
 
 ---
 
@@ -29,7 +29,7 @@ Work through every frame in the creative brief in sequence.
 
 **Text frames:**
 
-1. Locate the frame's thumbnail in `image-sheet.jpg`
+1. Read the frame's individual image from `[INPUTS_PATH]/images/NN-label.jpg`
 2. Identify the text zone declared in the creative brief
 3. Focus exclusively on that zone — not the whole image
 
