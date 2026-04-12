@@ -47,6 +47,8 @@ describe('generateImageMap', () => {
     }], 'P');
     assert(!result.includes('**Role:**'), 'empty role should be omitted');
     assert(!result.includes('**Notes:**'), 'empty notes should be omitted');
+    assert(!result.includes('**Story:**'), 'empty story should be omitted');
+    assert(!result.includes('**Stats:**'), 'empty stats should be omitted');
   });
 
   it('includes populated annotation fields', () => {
@@ -86,6 +88,7 @@ describe('generateImageMap', () => {
     const result = generateImageMap(images, 'P');
     assert(result.includes('## 01 · alpha'), 'first section');
     assert(result.includes('## 02 · beta'), 'second section');
+    assert(result.includes('\n\n## 02'), 'sections should be separated by blank line');
   });
 });
 
