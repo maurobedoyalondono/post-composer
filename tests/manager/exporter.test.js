@@ -3,64 +3,101 @@ import { describe, it, assert, assertEqual, assertThrows } from '../test-helper.
 import { generateImageMap, generateProjectBrief } from '../../manager/exporter.js';
 
 // ---------------------------------------------------------------------------
-// generateImageMap
+// generateImageMap (new section-based format)
 // ---------------------------------------------------------------------------
 
 describe('generateImageMap', () => {
   it('returns "no images" message for empty array', () => {
-    const result = generateImageMap([]);
-    assertEqual(result, 'No images in this project.\n');
+    assertEqual(generateImageMap([], 'Test'), 'No images in this project.\n');
   });
 
-  it('returns "no images" message for null/undefined', () => {
-    assertEqual(generateImageMap(null), 'No images in this project.\n');
-    assertEqual(generateImageMap(undefined), 'No images in this project.\n');
+  it('returns "no images" for null/undefined', () => {
+    assertEqual(generateImageMap(null, 'T'), 'No images in this project.\n');
+    assertEqual(generateImageMap(undefined, 'T'), 'No images in this project.\n');
   });
 
-  it('returns a markdown table with header, separator, and row for one image', () => {
-    const result = generateImageMap([{ filename: 'photo.jpg', label: 'Sunset' }]);
-    assert(result.includes('| Filename | Label |'), 'should include table header');
-    assert(result.includes('| -------- | ----- |'), 'should include table separator');
-    assert(result.includes('photo.jpg'), 'should include filename in row');
-    assert(result.includes('Sunset'), 'should include label in row');
+  it('includes project title as h1', () => {
+    const result = generateImageMap([{ filename: 'a.jpg', label: 'alpha' }], 'My Series');
+    assert(result.startsWith('# Image Map — My Series'), 'should start with h1 title');
   });
 
-  it('returns one row per image', () => {
+  it('generates section header with zero-padded index and label', () => {
+    const result = generateImageMap([{ filename: 'a.jpg', label: 'alpha' }], 'P');
+    assert(result.includes('## 01 · alpha'), 'should include padded index and label');
+  });
+
+  it('includes File and Thumbnail lines', () => {
+    const result = generateImageMap([{ filename: 'CC2A1369.jpg', label: 'wide-canyon' }], 'P');
+    assert(result.includes('**File:** CC2A1369.jpg'), 'should include File field');
+    assert(result.includes('**Thumbnail:** images/01-wide-canyon.jpg'), 'should include Thumbnail path');
+  });
+
+  it('omits annotation fields when annotation is absent', () => {
+    const result = generateImageMap([{ filename: 'a.jpg', label: 'alpha' }], 'P');
+    assert(!result.includes('**Role:**'), 'should omit Role when missing');
+    assert(!result.includes('**Notes:**'), 'should omit Notes when missing');
+    assert(!result.includes('**Story:**'), 'should omit Story when missing');
+    assert(!result.includes('**Stats:**'), 'should omit Stats when missing');
+  });
+
+  it('omits annotation fields when values are empty strings', () => {
+    const result = generateImageMap([{
+      filename: 'a.jpg', label: 'alpha',
+      annotation: { role: '', silent: false, notes: '', story: '', stats: '' }
+    }], 'P');
+    assert(!result.includes('**Role:**'), 'empty role should be omitted');
+    assert(!result.includes('**Notes:**'), 'empty notes should be omitted');
+  });
+
+  it('includes populated annotation fields', () => {
+    const result = generateImageMap([{
+      filename: 'a.jpg', label: 'alpha',
+      annotation: { role: 'opening', silent: false, notes: 'Great light', story: 'Dawn', stats: '3000m' }
+    }], 'P');
+    assert(result.includes('**Role:** opening'), 'should include Role');
+    assert(result.includes('**Silent:** no'), 'should include Silent no');
+    assert(result.includes('**Notes:** Great light'), 'should include Notes');
+    assert(result.includes('**Story:** Dawn'), 'should include Story');
+    assert(result.includes('**Stats:** 3000m'), 'should include Stats');
+  });
+
+  it('shows Silent: yes when silent is true', () => {
+    const result = generateImageMap([{
+      filename: 'a.jpg', label: 'alpha',
+      annotation: { silent: true }
+    }], 'P');
+    assert(result.includes('**Silent:** yes'), 'should show Silent yes');
+  });
+
+  it('pads index to two digits for first and tenth image', () => {
+    const images = Array.from({ length: 10 }, (_, i) => ({
+      filename: `img${i}.jpg`, label: `img${i}`
+    }));
+    const result = generateImageMap(images, 'P');
+    assert(result.includes('## 01 ·'), 'first image index should be 01');
+    assert(result.includes('## 10 ·'), 'tenth image index should be 10');
+  });
+
+  it('separates multiple images with blank lines', () => {
     const images = [
-      { filename: 'a.jpg', label: 'Alpha' },
-      { filename: 'b.jpg', label: 'Beta' },
-      { filename: 'c.jpg', label: 'Gamma' },
+      { filename: 'a.jpg', label: 'alpha' },
+      { filename: 'b.jpg', label: 'beta' },
     ];
-    const result = generateImageMap(images);
-    const lines = result.trim().split('\n');
-    // header + separator + 3 rows = 5 lines
-    assertEqual(lines.length, 5, 'should have header, separator, and one row per image');
-    assert(lines[2].includes('a.jpg'), 'first row should include first filename');
-    assert(lines[3].includes('b.jpg'), 'second row should include second filename');
-    assert(lines[4].includes('c.jpg'), 'third row should include third filename');
-  });
-
-  it('escapes pipe characters in filename and label', () => {
-    const result = generateImageMap([{ filename: 'a|b.jpg', label: 'c|d' }]);
-    assert(result.includes('a\\|b.jpg'), 'should escape pipe in filename');
-    assert(result.includes('c\\|d'), 'should escape pipe in label');
+    const result = generateImageMap(images, 'P');
+    assert(result.includes('## 01 · alpha'), 'first section');
+    assert(result.includes('## 02 · beta'), 'second section');
   });
 });
 
 // ---------------------------------------------------------------------------
-// generateProjectBrief
+// generateProjectBrief (unchanged — keep existing tests)
 // ---------------------------------------------------------------------------
 
 describe('generateProjectBrief', () => {
   it('includes title, platform, tone in output', () => {
     const brief = {
-      title: 'My Project',
-      platform: 'instagram-portrait',
-      tone: 'cinematic',
-      story: 'A story.',
-      imageMeta: [],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      title: 'My Project', platform: 'instagram-portrait', tone: 'cinematic',
+      story: 'A story.', imageMeta: [], createdAt: Date.now(), updatedAt: Date.now(),
     };
     const result = generateProjectBrief(brief, 'Instagram Portrait', 'Cinematic');
     assert(result.includes('My Project'), 'should include title');
@@ -68,61 +105,35 @@ describe('generateProjectBrief', () => {
     assert(result.includes('Cinematic'), 'should include toneLabel');
   });
 
-  it('includes story with two-space indent in output', () => {
-    const brief = {
-      title: 'T',
-      story: 'Once upon a time in the mountains.',
-      imageMeta: [],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    const result = generateProjectBrief(brief, 'Platform', 'Tone');
-    assert(result.includes('  Once upon a time in the mountains.'), 'should include indented story text');
+  it('includes story with two-space indent', () => {
+    const brief = { title: 'T', story: 'Once upon a time.', imageMeta: [], createdAt: Date.now(), updatedAt: Date.now() };
+    assert(generateProjectBrief(brief, 'P', 'T').includes('  Once upon a time.'), 'should indent story');
   });
 
   it('includes image count', () => {
-    const brief = {
-      title: 'T',
-      story: 'S',
-      imageMeta: [
-        { filename: 'a.jpg', label: 'A' },
-        { filename: 'b.jpg', label: 'B' },
-      ],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    const result = generateProjectBrief(brief, 'P', 'T');
-    assert(result.includes('Images: 2'), 'should include image count of 2');
+    const brief = { title: 'T', story: 'S', imageMeta: [{ filename: 'a.jpg', label: 'A' }, { filename: 'b.jpg', label: 'B' }], createdAt: Date.now(), updatedAt: Date.now() };
+    assert(generateProjectBrief(brief, 'P', 'T').includes('Images: 2'), 'should include count 2');
   });
 
-  it('shows 0 images when imageMeta is missing or not an array', () => {
+  it('shows 0 images when imageMeta is missing or null', () => {
     const brief = { title: 'T', story: 'S', createdAt: Date.now(), updatedAt: Date.now() };
-    assert(generateProjectBrief(brief, 'P', 'T').includes('Images: 0'), 'missing imageMeta should give count 0');
-    const brief2 = { ...brief, imageMeta: null };
-    assert(generateProjectBrief(brief2, 'P', 'T').includes('Images: 0'), 'null imageMeta should give count 0');
+    assert(generateProjectBrief(brief, 'P', 'T').includes('Images: 0'), 'missing → 0');
+    assert(generateProjectBrief({ ...brief, imageMeta: null }, 'P', 'T').includes('Images: 0'), 'null → 0');
   });
 
-  it('includes ISO date strings for createdAt and updatedAt', () => {
+  it('includes ISO dates', () => {
     const ts1 = new Date('2024-06-15T12:00:00.000Z').getTime();
     const ts2 = new Date('2024-07-20T08:30:00.000Z').getTime();
-    const brief = { title: 'T', story: 'S', imageMeta: [], createdAt: ts1, updatedAt: ts2 };
-    const result = generateProjectBrief(brief, 'P', 'T');
-    assert(result.includes('2024-06-15T12:00:00.000Z'), 'should include createdAt ISO string');
-    assert(result.includes('2024-07-20T08:30:00.000Z'), 'should include updatedAt ISO string');
+    const result = generateProjectBrief({ title: 'T', story: 'S', imageMeta: [], createdAt: ts1, updatedAt: ts2 }, 'P', 'T');
+    assert(result.includes('2024-06-15T12:00:00.000Z'), 'createdAt ISO');
+    assert(result.includes('2024-07-20T08:30:00.000Z'), 'updatedAt ISO');
   });
 
-  it('uses "Unknown" when createdAt is missing', () => {
-    const brief = { title: 'T', story: 'S', imageMeta: [], updatedAt: Date.now() };
+  it('uses "Unknown" when timestamps missing', () => {
+    const brief = { title: 'T', story: 'S', imageMeta: [] };
     const result = generateProjectBrief(brief, 'P', 'T');
-    assert(result.includes('Created:'), 'should include Created label');
-    assert(result.includes('Unknown'), 'should show Unknown for missing createdAt');
-  });
-
-  it('uses "Unknown" when updatedAt is missing', () => {
-    const brief = { title: 'T', story: 'S', imageMeta: [], createdAt: Date.now() };
-    const result = generateProjectBrief(brief, 'P', 'T');
-    assert(result.includes('Updated:'), 'should include Updated label');
-    assert(result.includes('Unknown'), 'should show Unknown for missing updatedAt');
+    const unknownCount = (result.match(/Unknown/g) ?? []).length;
+    assertEqual(unknownCount, 2, 'should have two Unknown entries');
   });
 
   it('throws when brief is null', () => {
