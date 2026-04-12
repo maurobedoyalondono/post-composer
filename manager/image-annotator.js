@@ -42,6 +42,7 @@ export class ImageAnnotator {
    * @param {string} briefId
    */
   async open(briefId) {
+    if (this._dialog.open) return;
     this._briefId = briefId;
     const brief   = storage.getBrief(briefId);
     if (!brief || !brief.imageMeta || brief.imageMeta.length === 0) return;
@@ -56,13 +57,12 @@ export class ImageAnnotator {
 
     this._currentIndex = 0;
 
+    this._stripHost.innerHTML = '';
     this._strip = new ThumbnailStrip(this._imageMeta, (i) => {
       this._saveCurrentAnnotation();
       this._currentIndex = i;
       this._render();
     });
-
-    this._stripHost.innerHTML = '';
     this._stripHost.appendChild(this._strip.el);
 
     this._render();
