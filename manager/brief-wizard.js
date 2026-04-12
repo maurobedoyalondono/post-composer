@@ -398,6 +398,56 @@ export class BriefWizard {
     this._renderAnnotation();
   }
 
+  _renderImageComparison(existingImages, newImages) {
+    this._indicatorEl.textContent = 'Replace image set?';
+    this._backBtn.hidden = true;
+    this._nextBtn.hidden = true;
+
+    const existingItems = existingImages
+      .map(m => `<li class="wizard-comparison-item">${_escHtml(m.filename)}</li>`)
+      .join('');
+    const newItems = newImages
+      .map(m => `<li class="wizard-comparison-item">${_escHtml(m.filename)}</li>`)
+      .join('');
+
+    this._bodyEl.innerHTML = `
+      <div class="wizard-comparison">
+        <div class="wizard-comparison-col">
+          <div class="wizard-comparison-header">Existing (${existingImages.length})</div>
+          <ul class="wizard-comparison-list">${existingItems}</ul>
+        </div>
+        <div class="wizard-comparison-col">
+          <div class="wizard-comparison-header">New (${newImages.length})</div>
+          <ul class="wizard-comparison-list">${newItems}</ul>
+        </div>
+      </div>
+      <div class="wizard-comparison-actions">
+        <button class="btn btn-secondary btn-keep-existing">Keep existing</button>
+        <button class="btn btn-danger btn-replace-all">Replace all</button>
+      </div>
+    `;
+
+    this._bodyEl.querySelector('.btn-keep-existing').addEventListener('click', async () => {
+      this._nextBtn.hidden = false;
+      this._backBtn.hidden = false;
+      // Keep existing — load dataUrls from IndexedDB
+      const stored = await imageStore.load(this._editId);
+      this._data.imageMeta = (this._data.imageMeta ?? []).map(m => ({
+        ...m,
+        dataUrl: stored[m.filename] ?? null,
+      }));
+      await this._enterAnnotationMode();
+    });
+
+    this._bodyEl.querySelector('.btn-replace-all').addEventListener('click', async () => {
+      this._nextBtn.hidden = false;
+      this._backBtn.hidden = false;
+      // Replace — use new images
+      this._data.imageMeta = newImages;
+      await this._enterAnnotationMode();
+    });
+  }
+
   _renderAnnotation() {
     const images = this._data.imageMeta ?? [];
     const total  = images.length;
