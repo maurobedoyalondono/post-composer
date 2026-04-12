@@ -350,29 +350,48 @@ export class BriefWizard {
   // ── Annotation transition ──────────────────────────────────────────────────
 
   async _transitionToAnnotation() {
-    const fileInput = this._bodyEl.querySelector('input[type="file"]');
-    if (fileInput && fileInput.files && fileInput.files.length > 0) {
-      this._data.imageMeta = await readFiles(fileInput.files);
+    const fileInput   = this._bodyEl.querySelector('input[type="file"]');
+    const hasNewFiles = fileInput && fileInput.files && fileInput.files.length > 0;
+
+    if (hasNewFiles) {
+      const newImages = await readFiles(fileInput.files);
+      const existing  = this._data.imageMeta ?? [];
+
+      if (this._editId && existing.length > 0) {
+        // Show comparison screen — user decides whether to replace
+        this._renderImageComparison(existing, newImages);
+        return;
+      }
+      // New brief or no existing images — use new files directly
+      this._data.imageMeta = newImages;
+    } else if (this._editId) {
+      // Edit mode, no new files — hydrate dataUrls from IndexedDB
+      const stored = await imageStore.load(this._editId);
+      this._data.imageMeta = (this._data.imageMeta ?? []).map(m => ({
+        ...m,
+        dataUrl: stored[m.filename] ?? null,
+      }));
     }
 
+    await this._enterAnnotationMode();
+  }
+
+  async _enterAnnotationMode() {
     const images = this._data.imageMeta ?? [];
     if (images.length === 0) {
-      // No images — save directly
       await this._save();
       return;
     }
 
-    // Enter annotation mode
     this._annotating      = true;
     this._annotationIndex = 0;
 
+    this._stripHostEl.innerHTML = '';
     this._strip = new ThumbnailStrip(images, (i) => {
       this._captureAnnotation();
       this._annotationIndex = i;
       this._renderAnnotation();
     });
-
-    this._stripHostEl.innerHTML = '';
     this._stripHostEl.appendChild(this._strip.el);
     this._stripHostEl.hidden = false;
 
