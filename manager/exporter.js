@@ -1,23 +1,38 @@
 // manager/exporter.js
 
 /**
- * Generate Markdown image map.
- * @param {Array<{filename: string, label: string}>} imageMeta
- * @returns {string} Markdown table
+ * Generate rich Markdown image map — one section per image.
+ * @param {Array<{filename: string, label: string, annotation?: object}>} imageMeta
+ * @param {string} projectTitle
+ * @returns {string}
  */
-export function generateImageMap(imageMeta) {
+export function generateImageMap(imageMeta, projectTitle = 'Project') {
   if (!imageMeta || imageMeta.length === 0) {
     return 'No images in this project.\n';
   }
 
-  const header    = '| Filename | Label |';
-  const separator = '| -------- | ----- |';
-  const escape = s => String(s).replace(/\|/g, '\\|');
-  const rows = imageMeta.map(
-    ({ filename, label }) => `| ${escape(filename)} | ${escape(label)} |`
-  );
+  const pad = (n) => String(n).padStart(2, '0');
 
-  return [header, separator, ...rows].join('\n') + '\n';
+  const sections = imageMeta.map((entry, i) => {
+    const idx = pad(i + 1);
+    const { filename, label, annotation = {} } = entry;
+    const { role = '', silent, notes = '', story = '', stats = '' } = annotation;
+
+    const lines = [
+      `## ${idx} · ${label}`,
+      `**File:** ${filename}`,
+      `**Thumbnail:** images/${idx}-${label}.jpg`,
+    ];
+    if (role)                         lines.push(`**Role:** ${role}`);
+    if (typeof silent === 'boolean')  lines.push(`**Silent:** ${silent ? 'yes' : 'no'}`);
+    if (notes)                        lines.push(`**Notes:** ${notes}`);
+    if (story)                        lines.push(`**Story:** ${story}`);
+    if (stats)                        lines.push(`**Stats:** ${stats}`);
+
+    return lines.join('\n');
+  });
+
+  return `# Image Map — ${projectTitle}\n\n${sections.join('\n\n')}\n`;
 }
 
 /**
