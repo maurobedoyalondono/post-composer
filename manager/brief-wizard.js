@@ -386,7 +386,7 @@ export class BriefWizard {
     const ann    = entry.annotation ?? {};
 
     this._indicatorEl.textContent = `Image ${this._annotationIndex + 1} of ${total}`;
-    this._backBtn.hidden = false;
+    this._backBtn.hidden = (this._annotationIndex === 0);
     this._nextBtn.textContent = (this._annotationIndex === total - 1) ? 'Save' : 'Next';
 
     const roleOptions = ROLES.map(r =>
@@ -394,9 +394,9 @@ export class BriefWizard {
     ).join('');
 
     this._bodyEl.innerHTML = `
-      <div class="wizard-annotation-meta">${entry.filename ?? ''} · ${entry.label ?? ''}</div>
+      <div class="wizard-annotation-meta">${_escHtml(entry.filename ?? '')} · ${_escHtml(entry.label ?? '')}</div>
       ${entry.dataUrl
-        ? `<img class="wizard-annotation-preview" src="${entry.dataUrl}" alt="${entry.label ?? ''}">`
+        ? `<img class="wizard-annotation-preview" src="${entry.dataUrl}" alt="${_escAttr(entry.label ?? '')}">`
         : ''}
       <div class="wizard-annotation-fields">
         <div class="wizard-annotation-row">
@@ -409,13 +409,13 @@ export class BriefWizard {
           </label>
         </div>
         <label class="wizard-annotation-label">Notes
-          <textarea class="wizard-textarea ann-notes" rows="2" placeholder="Why this image matters, photographer intent...">${ann.notes ?? ''}</textarea>
+          <textarea class="wizard-textarea ann-notes" rows="2" placeholder="Why this image matters, photographer intent...">${_escHtml(ann.notes ?? '')}</textarea>
         </label>
         <label class="wizard-annotation-label">Story
-          <textarea class="wizard-textarea ann-story" rows="2" placeholder="How/when captured, context...">${ann.story ?? ''}</textarea>
+          <textarea class="wizard-textarea ann-story" rows="2" placeholder="How/when captured, context...">${_escHtml(ann.story ?? '')}</textarea>
         </label>
         <label class="wizard-annotation-label">Stats
-          <input type="text" class="wizard-input ann-stats" placeholder="Any data or numbers to feature..." value="${ann.stats ?? ''}">
+          <input type="text" class="wizard-input ann-stats" placeholder="Any data or numbers to feature..." value="${_escAttr(ann.stats ?? '')}">
         </label>
       </div>
     `;
